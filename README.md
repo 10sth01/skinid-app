@@ -19,4 +19,4 @@ SkinID Chatbot is an Android application developed in Kotlin that allows users t
 3. Build and run the app on an Android emulator or physical device.
 
 ## Screenshots
-![Screenshot 1](https://github.com/10sth01/skinid=app/blob/main/screenshots/screenshot1.png?raw=true)
+![Screenshot 1](https://github.com/10sth01/skinid=app/blob/master/screenshots/screenshot1.png?raw=true)

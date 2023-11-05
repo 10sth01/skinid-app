@@ -58,6 +58,36 @@ class MainActivity : AppCompatActivity() {
         adapter.setHasStableIds(true)
         mainActivity.messageList.adapter = adapter
 
+        // starting message
+        val greetingMessages = listOf(
+            "Hello, I'm Skin ID! How can I assist you today?",
+            "Hi, I'm Skin ID! How can I help you with your skin concerns?",
+            "Hi, I'm Skin ID! How can I help you today?",
+            "Hello there, I'm Skin ID! How can I help you with your skin concerns?",
+            "Hi! How can I help you with your skin concerns today?"
+        )
+
+        val randomGreeting = greetingMessages.random()
+
+        val greetingMessage = MessageClass(
+            randomGreeting,
+            BOT,
+            System.currentTimeMillis()
+        )
+
+        // List of skin diseases the chatbot can detect
+        val skinDiseases = listOf("Acne", "Eczema", "Psoriasis", "Rosacea", "Warts")
+
+        // Message about the skin diseases
+        val diseasesMessage = MessageClass(
+            "I can detect a variety of skin conditions, including ${skinDiseases.joinToString(", ")}. Simply upload an image, and let's get started!",
+            BOT,
+            System.currentTimeMillis()
+        )
+
+        messageList.addAll(listOf(greetingMessage, diseasesMessage))
+        adapter.notifyDataSetChanged()
+
         // send button
         mainActivity.messageView.setEndIconOnClickListener{
             val msg = mainActivity.messageBox.text.toString()
@@ -99,13 +129,13 @@ class MainActivity : AppCompatActivity() {
         val predictions = outputFeature0.floatArray
 
         // List of class names
-        val classNames = listOf("Acne", "Eczema", "Healthy", "Psoriasis", "Rosacea", "Warts")
+        val classNames = listOf("acne", "eczema", "healthy", "psoriasis", "rosacea", "warts")
 
         // Pair each class label with its probability
         val classProbabilities = mutableListOf<Triple<String, Float, String>>()
 
         for (i in predictions.indices) {
-            val className = classNames.getOrNull(i) ?: "Unknown"
+            val className = classNames.getOrNull(i) ?: "unknown"
             classProbabilities.add(Triple("Class $i", predictions[i], className))
         }
 
@@ -238,17 +268,18 @@ class MainActivity : AppCompatActivity() {
 
     fun sendMessage(message:String, type:Int){
 
+        // constants for messages types
         val typeText = 0
-        val typImage = 1
+        val typeImage = 1
+
+        // create default user message
         var userMessage = MessageClass(timestamp = System.currentTimeMillis())
 
         // checks if input is null
         if(message.isEmpty()){
             Toast.makeText(this,"Please type your message",Toast.LENGTH_SHORT).show()
-        }
-
-        // executes if input is not null
-        else{
+        } else{
+            // executes if input is not null
             if (type == typeText) {
                 userMessage = com.example.skinidchatbot2.MessageClass(
                 message,
@@ -257,22 +288,48 @@ class MainActivity : AppCompatActivity() {
                 )
                 messageList.add(userMessage)
                 adapter.notifyDataSetChanged() }
-
+            else {
+                userMessage = com.example.skinidchatbot2.MessageClass(
+                message,
+                USER,
+                java.lang.System.currentTimeMillis()
+                )
+            }
         }
+
+        // set up retrofit for network communication
         val okHttpClient = OkHttpClient()
-        val retrofit = Retrofit.Builder().baseUrl("https://b9ae-2001-4451-b07-3000-89ee-7026-e8b-bcf0.ngrok-free.app/webhooks/rest/").client(okHttpClient).addConverterFactory(GsonConverterFactory.create()).build()
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://c948-2001-4451-b07-3000-e8d5-d15b-a6a5-6f5d.ngrok-free.app/webhooks/rest/")
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        // create MessageSender interface instance
         val messengerSender = retrofit.create(MessageSender::class.java)
+
+        // make asynchronouse network request to send the user message
         val response = messengerSender.messageSender(userMessage)
+
         response.enqueue(object: Callback<ArrayList<BotResponse>>{
             override fun onResponse(
                 call: Call<ArrayList<BotResponse>>,
                 response: Response<ArrayList<BotResponse>>
             ) {
+                // check if the response body is not null and not empty
                 if(response.body() != null || response.body()?.size != 0){
-                    val message = response.body()!![0]
-                    messageList.add(MessageClass(message.text, BOT, System.currentTimeMillis()))
+
+                    val message = response.body()?.get(0)
+
+                    if (message != null) {
+                        // adds the bot's response to the message list
+                        messageList.add(MessageClass(message.text, BOT, System.currentTimeMillis()))
+                    }
+
                     adapter.notifyDataSetChanged()
+
                 } else {
+                    // handles the case where the response body is null or empty
                     val errorMessage = "Error processing response. Please try again."
                     messageList.add(MessageClass(errorMessage, BOT, System.currentTimeMillis()))
                     adapter.notifyDataSetChanged()
@@ -280,6 +337,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onFailure(call: Call<ArrayList<BotResponse>>, t: Throwable) {
+                // handle the case of network failure
                 val message = "Check your connection"
                 messageList.add(MessageClass(message,BOT, System.currentTimeMillis()))
             }
@@ -297,7 +355,7 @@ class MainActivity : AppCompatActivity() {
 
         // Send the top 2 classes to the chatbot without displaying them in the UI
 
-        val message = "start_symptom_query " + (classLabels.joinToString(", "))
+        val message = "start_symptom_query " + (classLabels.joinToString(","))
 
         sendMessage(message, 1)
 

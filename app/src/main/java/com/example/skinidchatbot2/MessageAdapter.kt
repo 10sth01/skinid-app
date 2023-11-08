@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
@@ -34,12 +35,20 @@ class MessageAdapter(var context:Context,var messageList:MutableList<MessageClas
             holder.leftChatView.setVisibility(View.GONE)
             holder.rightChatView.setVisibility(View.VISIBLE)
             holder.rightTextView.setText(currentMessage.message)
-            holder.user_time_view.text = formattedTime
+            //holder.user_time_view.text = formattedTime
         } else if(currentMessage.sender.equals(BOT_LAYOUT)){
             holder.rightChatView.setVisibility(View.GONE)
             holder.leftChatView.setVisibility(View.VISIBLE)
             holder.leftTextView.setText(currentMessage.message)
-            holder.bot_time_view.text = formattedTime
+            //holder.bot_time_view.text = formattedTime
+
+            if (currentMessage.containsQuestion) {
+                holder.yesButton.visibility = View.VISIBLE
+                holder.noButton.visibility = View.VISIBLE
+            } else {
+                holder.yesButton.visibility = View.GONE
+                holder.noButton.visibility = View.GONE
+            }
         } else if(currentMessage.sender.equals(USER_IMAGE_LAYOUT)) {
             holder.leftChatView.visibility = View.GONE
             holder.rightChatView.visibility = View.VISIBLE
@@ -75,6 +84,7 @@ class MessageAdapter(var context:Context,var messageList:MutableList<MessageClas
 
         val imageView = view.findViewById<ImageView>(R.id.user_image_iv)
 
+        val yesButton = view.findViewById<Button>(R.id.yes_button)
+        val noButton = view.findViewById<Button>(R.id.no_button)
     }
-
 }

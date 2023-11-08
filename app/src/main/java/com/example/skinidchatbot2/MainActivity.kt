@@ -37,6 +37,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.io.FileDescriptor
 
 class MainActivity : AppCompatActivity() {
+    private val QUESTION_MARK = "?"
     lateinit var mainActivity: ActivityMainBinding
     lateinit var imagepopup: PopupWindow
     private lateinit var messageList:ArrayList<MessageClass>
@@ -45,6 +46,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: MessageAdapter
     private val CAMERA_REQUEST_CODE = 100
     private val GALLERY_REQUEST_CODE = 200
+    private lateinit var yesButton: Button
+    private lateinit var noButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -102,7 +105,6 @@ class MainActivity : AppCompatActivity() {
         }
 
     }
-
 
     private fun resizeBitmap(originalBitmap: Bitmap, targetWidth: Int, targetHeight: Int): Bitmap {
         return Bitmap.createScaledBitmap(originalBitmap, targetWidth, targetHeight, true)
@@ -266,6 +268,16 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    fun onYesButtonClick() {
+        sendMessage("Yes", 0)
+        toggleInputBoxVisibility(true)
+    }
+
+    fun onNoButtonClick() {
+        sendMessage("No", 0)
+        toggleInputBoxVisibility(true)
+    }
+
     fun sendMessage(message:String, type:Int){
 
         // constants for messages types
@@ -300,7 +312,7 @@ class MainActivity : AppCompatActivity() {
         // set up retrofit for network communication
         val okHttpClient = OkHttpClient()
         val retrofit = Retrofit.Builder()
-            .baseUrl("https://c948-2001-4451-b07-3000-e8d5-d15b-a6a5-6f5d.ngrok-free.app/webhooks/rest/")
+            .baseUrl("https://396d-2001-4451-b33-f200-b067-b544-73d8-cddc.ngrok-free.app/webhooks/rest/")
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -319,11 +331,25 @@ class MainActivity : AppCompatActivity() {
                 // check if the response body is not null and not empty
                 if(response.body() != null || response.body()?.size != 0){
 
+                    val utter_list = listOf(
+                        "Hello! How can I assist you today?",
+                        "Hi there! How can I help you with your skin concerns?",
+                        "Hi! How can I help you today?",
+                        "Hello there! How can I help you with your skin concerns?",
+                        "Hi! How can I help you with your skin concerns today?",
+                        "I'm sorry, I didn't quite understand your request. Could you please rephrase or provide more details?",
+                        "Apologies, but I couldn't grasp your query. Could you try wording it differently?",
+                        "I'm having trouble processing your request. Can you rephrase it in a different way?",
+                        "I didn't catch that. Can you please provide more context or rephrase your statement?"
+                    )
+
                     val message = response.body()?.get(0)
 
                     if (message != null) {
                         // adds the bot's response to the message list
-                        messageList.add(MessageClass(message.text, BOT, System.currentTimeMillis()))
+                        val containsQuestion = message.text.contains("?") && message.text !in utter_list
+                        messageList.add(MessageClass(message.text, BOT, System.currentTimeMillis(), containsQuestion = containsQuestion))
+                        toggleInputBoxVisibility(false)
                     }
 
                     adapter.notifyDataSetChanged()
@@ -342,7 +368,9 @@ class MainActivity : AppCompatActivity() {
                 messageList.add(MessageClass(message,BOT, System.currentTimeMillis()))
             }
 
-        })
+        }
+
+        )
     }
 
     fun sendImgMessage(imageBitmap: Bitmap) {

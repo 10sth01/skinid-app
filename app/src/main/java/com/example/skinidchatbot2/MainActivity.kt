@@ -2,6 +2,7 @@ package com.example.skinidchatbot2
 
 import android.Manifest
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -9,6 +10,7 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import android.provider.MediaStore
 import android.os.Bundle
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -18,6 +20,7 @@ import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -56,7 +59,61 @@ class MainActivity : AppCompatActivity() {
         mainActivity.imageBtn.setOnClickListener{
             showPopup()
         }
+
+        //resetPrivacyAgreementStatus() //for checking only
+
+        // Check if the agreement has been accepted
+        if (!isPrivacyAgreementAccepted()) {
+            showPrivacyAgreementDialog()
+        }
     }
+
+    private val AGREEMENT_KEY = "privacy_agreement_accepted"
+
+    private fun isPrivacyAgreementAccepted(): Boolean {
+        val sharedPreferences = getPreferences(Context.MODE_PRIVATE)
+        val isAccepted = sharedPreferences.getBoolean(AGREEMENT_KEY, false)
+        Log.d("PrivacyAgreement", "Is Privacy Agreement Accepted: $isAccepted")
+        return isAccepted
+    }
+
+    private fun markPrivacyAgreementAccepted() {
+        val sharedPreferences = getPreferences(Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.putBoolean(AGREEMENT_KEY, true)
+        editor.apply()
+    }
+
+    //for resetting sharedPreferences to check pop up. checking purposes only. can be deleted.
+    private fun resetPrivacyAgreementStatus() {
+        val sharedPreferences = getPreferences(Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.putBoolean("privacy_agreement_accepted", false)
+        editor.apply()
+    }
+
+    private fun showPrivacyAgreementDialog() {
+        val dialogText =
+            "Welcome to Skin ID!\n" +
+                    "\n" +
+                    "Before you start using our skin lesion identification services, please take a moment to review our privacy agreement. Your privacy and the security of your data are our top priorities.\n" +
+                    "\n" +
+                    "By using Skin ID, you consent to the processing of images of skin lesions for the purpose of identification. Your information will not be shared with third parties.\n" +
+                    "\n" +
+                    "Thank you for choosing Skin ID!"
+
+        val dialog = AlertDialog.Builder(this)
+            .setMessage(dialogText)
+            .setCancelable(false)
+            .setPositiveButton("Accept") { _: DialogInterface, _: Int ->
+                // Update SharedPreferences whether the agreement is accepted
+                markPrivacyAgreementAccepted()
+            }
+            .create()
+
+        dialog.show()
+    }
+
 
     private fun resizeBitmap(originalBitmap: Bitmap, targetWidth: Int, targetHeight: Int): Bitmap {
         return Bitmap.createScaledBitmap(originalBitmap, targetWidth, targetHeight, true)

@@ -9,14 +9,13 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import android.provider.MediaStore
 import android.os.Bundle
-import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.ImageView
 import android.widget.PopupWindow
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -25,84 +24,39 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.skinidchatbot2.databinding.ActivityMainBinding
 import com.example.skinidchatbot2.ml.ClassificationModel
-import okhttp3.OkHttpClient
+import com.google.firebase.database.FirebaseDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.image.TensorImage
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import java.io.FileDescriptor
 
 class MainActivity : AppCompatActivity() {
     lateinit var mainActivity: ActivityMainBinding
     lateinit var imagepopup: PopupWindow
-    private lateinit var messageList:ArrayList<MessageClass>
-    private val USER = 0
-    private val BOT = 1
-    private lateinit var adapter: MessageAdapter
     private val CAMERA_REQUEST_CODE = 100
     private val GALLERY_REQUEST_CODE = 200
+    var class_1_vote = 0
+    var class_2_vote = 0
+    var buttonsClicked = false
+    var initialPrediction: List<String> = listOf()
 
+    val dbSkinConditions = FirebaseDatabase.getInstance().getReference("conditions");
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mainActivity = ActivityMainBinding.inflate(layoutInflater)
         setContentView(mainActivity.root)
-        messageList = ArrayList<MessageClass>()
         val linearLayoutManager = LinearLayoutManager(this)
         linearLayoutManager.orientation = LinearLayoutManager.VERTICAL
-        mainActivity.messageList.layoutManager = linearLayoutManager
-        adapter = MessageAdapter(this,messageList)
-        adapter.setHasStableIds(true)
-        mainActivity.messageList.adapter = adapter
-
-        // starting message
-        val greetingMessages = listOf(
-            "Hello, I'm Skin ID! How can I assist you today?",
-            "Hi, I'm Skin ID! How can I help you with your skin concerns?",
-            "Hi, I'm Skin ID! How can I help you today?",
-            "Hello there, I'm Skin ID! How can I help you with your skin concerns?",
-            "Hi! How can I help you with your skin concerns today?"
-        )
-
-        val randomGreeting = greetingMessages.random()
-
-        val greetingMessage = MessageClass(
-            randomGreeting,
-            BOT,
-            System.currentTimeMillis()
-        )
-
-        // List of skin diseases the chatbot can detect
-        val skinDiseases = listOf("Acne", "Eczema", "Psoriasis", "Rosacea", "Warts")
-
-        // Message about the skin diseases
-        val diseasesMessage = MessageClass(
-            "I can detect a variety of skin conditions, including ${skinDiseases.joinToString(", ")}. Simply upload an image, and let's get started!",
-            BOT,
-            System.currentTimeMillis()
-        )
-
-        messageList.addAll(listOf(greetingMessage, diseasesMessage))
-        adapter.notifyDataSetChanged()
-
-        // send button
-        mainActivity.messageView.setEndIconOnClickListener{
-            val msg = mainActivity.messageBox.text.toString()
-            sendMessage(msg, 0)
-            Toast.makeText(this, "Message sent", Toast.LENGTH_SHORT).show()
-            mainActivity.messageBox.setText("")
-        }
 
         // upload/capture image button
-        mainActivity.messageView.setStartIconOnClickListener{
+        mainActivity.imageBtn.setOnClickListener{
             showPopup()
         }
-
     }
-
 
     private fun resizeBitmap(originalBitmap: Bitmap, targetWidth: Int, targetHeight: Int): Bitmap {
         return Bitmap.createScaledBitmap(originalBitmap, targetWidth, targetHeight, true)
@@ -150,12 +104,209 @@ class MainActivity : AppCompatActivity() {
         return classLabels
     }
 
+    private suspend fun fetchConditionData(conditionName: String): Condition? {
+        val database = FirebaseDatabase.getInstance().getReference("conditions")
+        val snapshot = database.child(conditionName).get().await()
+
+        return if (snapshot.exists()) {
+            val causes = snapshot.child("causes").children.map { Cause(it.value as String) }
+            val description = snapshot.child("description").value as String
+            val symptoms = snapshot.child("symptoms").children.map { Symptom(it.value as String) }
+            val treatment = snapshot.child("treatment").children.map { Treatment(it.value as String) }
+
+            Condition(causes, description, symptoms, treatment)
+        } else {
+            null
+        }
+    }
+
+    private fun <T> buildSectionText(items: List<T>, textExtractor: (T) -> String): String {
+        val stringBuilder = StringBuilder()
+        for (item in items) {
+            stringBuilder.append(" - ${textExtractor(item)}\n")
+        }
+        return stringBuilder.toString()
+    }
+
+    private fun showDiagnosisPopup(conditionName: String, condition: Condition) {
+        val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val popupView: View = inflater.inflate(R.layout.diagnosis_popup, null)
+
+        // Populate the popup layout with data from the Condition object
+        val titleTextView: TextView = popupView.findViewById(R.id.popupTitle)
+        titleTextView.text = conditionName
+
+        val descriptionTextView: TextView = popupView.findViewById(R.id.descriptionTextView)
+        descriptionTextView.text = condition.description
+
+        // Populate Causes
+        val causesTextView: TextView = popupView.findViewById(R.id.causesTextView)
+        causesTextView.text = buildSectionText(condition.causes) { it.cause }
+
+        // Populate Symptoms
+        val symptomsTextView: TextView = popupView.findViewById(R.id.symptomsTextView)
+        symptomsTextView.text = buildSectionText(condition.symptoms) { it.symptom }
+
+        // Populate Treatment
+        val treatmentTextView: TextView = popupView.findViewById(R.id.treatmentTextView)
+        treatmentTextView.text = buildSectionText(condition.treatment) { it.treatment }
+
+        // Show the popup
+        val diagnosisPopup = PopupWindow(
+            popupView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        )
+
+        // Close the popup
+        val closeButton: Button = popupView.findViewById(R.id.closeButton)
+        closeButton.setOnClickListener {
+            diagnosisPopup.dismiss()
+            mainActivity.questionTextView.text = "Hey there! I'm Skin ID. I can spot acne, eczema, psoriasis, rosacea, and warts. Snap a pic to begin!"
+            mainActivity.imageBtn.visibility = View.VISIBLE
+        }
+
+        diagnosisPopup.animationStyle = com.google.android.material.R.style.Animation_Design_BottomSheetDialog
+
+        diagnosisPopup.showAtLocation(
+            mainActivity.root,
+            Gravity.CENTER,
+            0,
+            0
+        )
+    }
+
+    private fun finalPrediction(initialPrediction:List<String>, class_1_vote:Int, class_2_vote:Int): String {
+
+        var finalPrediction: String
+
+        if ("healthy" in initialPrediction) {
+            if (initialPrediction.elementAt(0) == "healthy") {
+                var overall_score = class_2_vote
+                if (overall_score > 2) {
+                    finalPrediction = initialPrediction.elementAt(1)
+                } else {
+                    finalPrediction = "You do not have a skin lesion"
+                }
+            } else {
+                var overall_score = class_1_vote
+                if (overall_score > 2) {
+                    finalPrediction = initialPrediction.elementAt(0)
+                } else {
+                    finalPrediction = "You do not have a skin lesion"
+                }
+            }
+        } else {
+            if (class_1_vote > class_2_vote) {
+                finalPrediction = initialPrediction.elementAt(0)
+            } else if (class_2_vote > class_1_vote) {
+                finalPrediction = initialPrediction.elementAt(1)
+            } else {
+                finalPrediction = initialPrediction.elementAt(0)
+            }
+        }
+        return finalPrediction
+    }
+    private suspend fun queryUser(initialPrediction: List<String>) {
+        var top_class_1 = initialPrediction.elementAt(0)
+        var top_class_2 = initialPrediction.elementAt(1)
+        class_1_vote = 0
+        class_2_vote = 0
+        var questionIndex = 1
+
+        for (i in 0..1) {
+            questionIndex = 1
+            val skinCondition = initialPrediction.elementAt(i)
+            if (initialPrediction.elementAt(i) == "healthy") {
+                continue
+            } else {
+
+                while (questionIndex < 6) {
+
+                    val database = FirebaseDatabase.getInstance().getReference("conditions")
+                    val snapshot = database.child(initialPrediction.elementAt(i)).get().await()
+
+                    if (questionIndex < 5) {
+
+                        if (snapshot.exists()) {
+                            val question = snapshot.child("questions").child("question$questionIndex").value
+                            mainActivity.questionTextView.text = ""
+                            mainActivity.questionTextView.text = question.toString()
+                            mainActivity.yesButton.visibility = View.VISIBLE
+                            mainActivity.noButton.visibility = View.VISIBLE
+                        }
+                    }
+
+                    buttonsClicked = false
+                    mainActivity.yesButton.setOnClickListener() {
+                        if (!buttonsClicked) {
+                            if (i == 0) {
+                                class_1_vote += 1
+                            } else {
+                                class_2_vote += 1
+                            }
+                            buttonsClicked = true
+                            questionIndex += 1
+                            if (questionIndex < 6) {
+                                if (snapshot.exists()) {
+                                    val question = snapshot.child("questions").child("question$questionIndex").value
+                                    mainActivity.questionTextView.text = ""
+                                    mainActivity.questionTextView.text = question.toString()
+                                    mainActivity.yesButton.visibility = View.VISIBLE
+                                    mainActivity.noButton.visibility = View.VISIBLE
+                                    buttonsClicked = false
+                                }
+                            }
+                        }
+                    }
+
+                    mainActivity.noButton.setOnClickListener() {
+                        if (!buttonsClicked) {
+                            buttonsClicked = true
+                            questionIndex += 1
+                            if (questionIndex < 6) {
+                                if (snapshot.exists()) {
+                                    val question = snapshot.child("questions").child("question$questionIndex").value
+                                    mainActivity.questionTextView.text = ""
+                                    mainActivity.questionTextView.text = question.toString()
+                                    mainActivity.yesButton.visibility = View.VISIBLE
+                                    mainActivity.noButton.visibility = View.VISIBLE
+                                    buttonsClicked = false
+                                }
+                            }
+                        }
+                    }
+                }
+                continue
+            }
+        }
+        val conditionName = finalPrediction(initialPrediction, class_1_vote, class_2_vote)
+        val conditionData = fetchConditionData(conditionName)
+
+        if (conditionData != null) {
+            showDiagnosisPopup(conditionName, conditionData)
+            mainActivity.questionTextView.text = "Hey there! I'm Skin ID. I can spot acne, eczema, psoriasis, rosacea, and warts. Snap a pic to begin!"
+        } else {
+            mainActivity.questionTextView.text = "You do not have a skin lesion"
+        }
+        mainActivity.yesButton.visibility = View.GONE
+        mainActivity.noButton.visibility = View.GONE
+
+        mainActivity.imageDisplay.setImageBitmap(null)
+    }
+
     private val cameraActivityResultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
                 val imageBitmap = result.data?.extras?.get("data") as Bitmap
                 val resizedBitmap = resizeBitmap(imageBitmap, 224, 224)
-                sendImgMessage(imageBitmap = resizedBitmap)
+                mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
+                initialPrediction = classifyImage(this, resizedBitmap)
+                CoroutineScope(Dispatchers.Main).launch {
+                    queryUser(initialPrediction)
+                }
+                hidePopup()
             }
         }
 
@@ -169,7 +320,12 @@ class MainActivity : AppCompatActivity() {
                     val image = BitmapFactory.decodeFileDescriptor(fileDescriptor)
                     parcelFileDescriptor.close()
                     val resizedBitmap = resizeBitmap(image, 224, 224)
-                    sendImgMessage(imageBitmap = resizedBitmap)
+                    mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
+                    initialPrediction = classifyImage(this, resizedBitmap)
+                    CoroutineScope(Dispatchers.Main).launch {
+                        queryUser(initialPrediction)
+                    }
+                    hidePopup()
                 } else {
                     Toast.makeText(this, "No image selected", Toast.LENGTH_SHORT).show()
                 }
@@ -189,6 +345,12 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
                 }
             }
+        }
+    }
+
+    private fun hidePopup() {
+        if (::imagepopup.isInitialized && imagepopup.isShowing) {
+            imagepopup.dismiss()
         }
     }
 
@@ -216,7 +378,7 @@ class MainActivity : AppCompatActivity() {
                         galleryActivityResultLauncher.launch(galleryIntent)
                     }
                 }
-        }
+            }
             else {
                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                     // launch gallery intent
@@ -264,100 +426,5 @@ class MainActivity : AppCompatActivity() {
             0,
             0
         )
-    }
-
-    fun sendMessage(message:String, type:Int){
-
-        // constants for messages types
-        val typeText = 0
-        val typeImage = 1
-
-        // create default user message
-        var userMessage = MessageClass(timestamp = System.currentTimeMillis())
-
-        // checks if input is null
-        if(message.isEmpty()){
-            Toast.makeText(this,"Please type your message",Toast.LENGTH_SHORT).show()
-        } else{
-            // executes if input is not null
-            if (type == typeText) {
-                userMessage = com.example.skinidchatbot2.MessageClass(
-                message,
-                USER,
-                java.lang.System.currentTimeMillis()
-                )
-                messageList.add(userMessage)
-                adapter.notifyDataSetChanged() }
-            else {
-                userMessage = com.example.skinidchatbot2.MessageClass(
-                message,
-                USER,
-                java.lang.System.currentTimeMillis()
-                )
-            }
-        }
-
-        // set up retrofit for network communication
-        val okHttpClient = OkHttpClient()
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://c948-2001-4451-b07-3000-e8d5-d15b-a6a5-6f5d.ngrok-free.app/webhooks/rest/")
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-        // create MessageSender interface instance
-        val messengerSender = retrofit.create(MessageSender::class.java)
-
-        // make asynchronouse network request to send the user message
-        val response = messengerSender.messageSender(userMessage)
-
-        response.enqueue(object: Callback<ArrayList<BotResponse>>{
-            override fun onResponse(
-                call: Call<ArrayList<BotResponse>>,
-                response: Response<ArrayList<BotResponse>>
-            ) {
-                // check if the response body is not null and not empty
-                if(response.body() != null || response.body()?.size != 0){
-
-                    val message = response.body()?.get(0)
-
-                    if (message != null) {
-                        // adds the bot's response to the message list
-                        messageList.add(MessageClass(message.text, BOT, System.currentTimeMillis()))
-                    }
-
-                    adapter.notifyDataSetChanged()
-
-                } else {
-                    // handles the case where the response body is null or empty
-                    val errorMessage = "Error processing response. Please try again."
-                    messageList.add(MessageClass(errorMessage, BOT, System.currentTimeMillis()))
-                    adapter.notifyDataSetChanged()
-                }
-            }
-
-            override fun onFailure(call: Call<ArrayList<BotResponse>>, t: Throwable) {
-                // handle the case of network failure
-                val message = "Check your connection"
-                messageList.add(MessageClass(message,BOT, System.currentTimeMillis()))
-            }
-
-        })
-    }
-
-    fun sendImgMessage(imageBitmap: Bitmap) {
-        val userMessage = MessageClass(sender = 2, timestamp = System.currentTimeMillis(), imageBitmap = imageBitmap, )
-        messageList.add(userMessage)
-        adapter.notifyDataSetChanged()
-
-        // Classify the image to get the top 2 classes
-        val classLabels = classifyImage(this,imageBitmap)
-
-        // Send the top 2 classes to the chatbot without displaying them in the UI
-
-        val message = "start_symptom_query " + (classLabels.joinToString(","))
-
-        sendMessage(message, 1)
-
     }
 }

@@ -4,8 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/gray"
+    android:background="@drawable/wavebg"
     tools:context=".MainActivity">
+
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appbar"
         android:layout_width="match_parent"
@@ -16,9 +17,11 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent">
+
         <androidx.appcompat.widget.Toolbar
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize">
+
             <com.google.android.material.imageview.ShapeableImageView
                 android:layout_width="40dp"
                 android:layout_height="40dp"
@@ -28,66 +31,85 @@
                 android:src="@drawable/ic_robot"
                 app:shapeAppearanceOverlay="@style/circleView"
                 />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="17sp"
+                android:textSize="20sp"
                 android:textStyle="bold"
-                android:text="Skin ID Chatbot"
+                android:text="Skin ID"
                 android:textColor="@android:color/white"
                 android:fontFamily = "@font/notosans"/>
+
         </androidx.appcompat.widget.Toolbar>
+
     </com.google.android.material.appbar.AppBarLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/message_list"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginVertical="5dp"
-        android:layout_marginHorizontal="20dp"
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/image_display"
+        android:layout_width="225dp"
+        android:layout_height="225dp"
+        android:layout_marginTop="70dp"
+        android:background="@drawable/bot_message_bg"
+        app:elevation="8dp"
+        app:layout_constraintBottom_toTopOf="@id/image_btn"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/appbar"
-        app:layout_constraintBottom_toTopOf="@id/message_view"/>
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.204" />
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/message_view"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+    <TextView
+        android:id="@+id/questionTextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginBottom="20dp"
+        android:text="Hey there! I'm Skin ID. I can spot acne, eczema, psoriasis, rosacea, and warts. Snap a pic to begin!"
+        android:textSize="20sp"
+        android:textColor="@color/orange"
+        android:layout_marginHorizontal="30dp"
+        android:gravity="center"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@+id/image_display"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/message_list"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="40dp" />
+
+    <ImageButton
+        android:id="@+id/yesButton"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:background="@drawable/yes_btn_bg"
+        app:layout_constraintTop_toBottomOf="@+id/questionTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/noButton"
+        android:layout_marginTop="20dp"
+        android:visibility="gone"
+    />
+
+    <ImageButton
+        android:id="@+id/noButton"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:background="@drawable/no_btn_bg"
+        app:layout_constraintTop_toBottomOf="@+id/questionTextView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/yesButton"
+        android:layout_marginTop="20dp"
+        android:visibility="gone"
+    />
+
+
+    <ImageButton
+        android:id="@+id/image_btn"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:background="@drawable/custom_button_background"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_camera"
+        app:tint="@android:color/white"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:boxBackgroundColor="@color/white"
-        app:boxStrokeColor="#FF9B50"
-        app:boxStrokeWidth="0dp"
-        app:endIconMode="custom"
-        app:endIconTint="#FF9B50"
-        app:startIconTint="@color/orange"
-        app:startIconDrawable="@drawable/ic_camera"
-        app:endIconDrawable="@drawable/ic_send">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/messageBox"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:textCursorDrawable="@drawable/color_cursor"
-            />
-
-    </com.google.android.material.textfield.TextInputLayout>
-    <!-- <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/send_btn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
-        android:backgroundTint="#FF8C00"
-        android:src="@drawable/ic_send"
-        app:fabSize="normal"
-        app:layout_constraintStart_toEndOf="@id/message_view"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" /> -->
+        android:layout_marginBottom="16dp"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import android.provider.MediaStore
 import android.os.Bundle
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -26,37 +27,27 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.skinidchatbot2.databinding.ActivityMainBinding
 import com.example.skinidchatbot2.ml.ClassificationModel
-<<<<<<< HEAD
-=======
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
->>>>>>> c68f204e49a3e38ccf07dc22f7ef1c87b1d3c321
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.image.TensorImage
 import java.io.FileDescriptor
-
 
 class MainActivity : AppCompatActivity() {
     lateinit var mainActivity: ActivityMainBinding
     lateinit var imagepopup: PopupWindow
     private val CAMERA_REQUEST_CODE = 100
     private val GALLERY_REQUEST_CODE = 200
-<<<<<<< HEAD
-    private lateinit var yesButton: Button
-    private lateinit var noButton: Button
-    val imageDisplay = findViewById<ImageView>(R.id.image_display)
-=======
     var class_1_vote = 0
     var class_2_vote = 0
     var buttonsClicked = false
     var initialPrediction: List<String> = listOf()
 
     val dbSkinConditions = FirebaseDatabase.getInstance().getReference("conditions");
->>>>>>> c68f204e49a3e38ccf07dc22f7ef1c87b1d3c321
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mainActivity = ActivityMainBinding.inflate(layoutInflater)
@@ -68,8 +59,6 @@ class MainActivity : AppCompatActivity() {
         mainActivity.imageBtn.setOnClickListener{
             showPopup()
         }
-<<<<<<< HEAD
-=======
 
         //resetPrivacyAgreementStatus() //for checking only
 
@@ -123,8 +112,8 @@ class MainActivity : AppCompatActivity() {
             .create()
 
         dialog.show()
->>>>>>> c68f204e49a3e38ccf07dc22f7ef1c87b1d3c321
     }
+
 
     private fun resizeBitmap(originalBitmap: Bitmap, targetWidth: Int, targetHeight: Int): Bitmap {
         return Bitmap.createScaledBitmap(originalBitmap, targetWidth, targetHeight, true)
@@ -151,7 +140,8 @@ class MainActivity : AppCompatActivity() {
         val predictions = outputFeature0.floatArray
 
         // List of class names
-        val classNames = listOf("acne", "eczema", "healthy", "psoriasis", "rosacea", "warts")
+        val classNames = listOf("acne", "alopecia areata", "eczema", "healthy", "psoriasis",
+            "raynaud's syndrome", "rosacea", "vitiligo", "warts")
 
         // Pair each class label with its probability
         val classProbabilities = mutableListOf<Triple<String, Float, String>>()
@@ -231,7 +221,9 @@ class MainActivity : AppCompatActivity() {
         val closeButton: Button = popupView.findViewById(R.id.closeButton)
         closeButton.setOnClickListener {
             diagnosisPopup.dismiss()
-            mainActivity.questionTextView.text = "Hey there! I'm Skin ID. I can spot acne, eczema, psoriasis, rosacea, and warts. Snap a pic to begin!"
+            mainActivity.questionTextView.text = "Hey there! I'm Skin ID. I can spot acne, " +
+                    "alopecia areata, eczema, psoriasis, Raynaud's syndrome, rosacea, vitiligo " +
+                    "and warts. Snap a pic to begin!"
             mainActivity.imageBtn.visibility = View.VISIBLE
         }
 
@@ -270,8 +262,10 @@ class MainActivity : AppCompatActivity() {
                 finalPrediction = initialPrediction.elementAt(0)
             } else if (class_2_vote > class_1_vote) {
                 finalPrediction = initialPrediction.elementAt(1)
-            } else {
+            } else if (class_2_vote == class_1_vote && class_1_vote > 0 && class_2_vote > 0){
                 finalPrediction = initialPrediction.elementAt(0)
+            } else {
+                finalPrediction = "You do not have a skin lesion"
             }
         }
         return finalPrediction
@@ -282,6 +276,8 @@ class MainActivity : AppCompatActivity() {
         class_1_vote = 0
         class_2_vote = 0
         var questionIndex = 1
+
+        mainActivity.imageBtn.visibility = View.GONE
 
         for (i in 0..1) {
             questionIndex = 1
@@ -354,12 +350,15 @@ class MainActivity : AppCompatActivity() {
 
         if (conditionData != null) {
             showDiagnosisPopup(conditionName, conditionData)
-            mainActivity.questionTextView.text = "Hey there! I'm Skin ID. I can spot acne, eczema, psoriasis, rosacea, and warts. Snap a pic to begin!"
+            mainActivity.questionTextView.text = "Hey there! I'm Skin ID. I can spot acne, " +
+                    "alopecia areata, eczema, psoriasis, Raynaud's syndrome, rosacea, vitiligo " +
+                    "and warts. Snap a pic to begin!"
         } else {
             mainActivity.questionTextView.text = "You do not have a skin lesion"
         }
         mainActivity.yesButton.visibility = View.GONE
         mainActivity.noButton.visibility = View.GONE
+        mainActivity.imageBtn.visibility = View.VISIBLE
 
         mainActivity.imageDisplay.setImageBitmap(null)
     }
@@ -369,16 +368,12 @@ class MainActivity : AppCompatActivity() {
             if (result.resultCode == RESULT_OK) {
                 val imageBitmap = result.data?.extras?.get("data") as Bitmap
                 val resizedBitmap = resizeBitmap(imageBitmap, 224, 224)
-<<<<<<< HEAD
-
-=======
                 mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
                 initialPrediction = classifyImage(this, resizedBitmap)
                 CoroutineScope(Dispatchers.Main).launch {
                     queryUser(initialPrediction)
                 }
                 hidePopup()
->>>>>>> c68f204e49a3e38ccf07dc22f7ef1c87b1d3c321
             }
         }
 
@@ -392,16 +387,12 @@ class MainActivity : AppCompatActivity() {
                     val image = BitmapFactory.decodeFileDescriptor(fileDescriptor)
                     parcelFileDescriptor.close()
                     val resizedBitmap = resizeBitmap(image, 224, 224)
-<<<<<<< HEAD
-
-=======
                     mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
                     initialPrediction = classifyImage(this, resizedBitmap)
                     CoroutineScope(Dispatchers.Main).launch {
                         queryUser(initialPrediction)
                     }
                     hidePopup()
->>>>>>> c68f204e49a3e38ccf07dc22f7ef1c87b1d3c321
                 } else {
                     Toast.makeText(this, "No image selected", Toast.LENGTH_SHORT).show()
                 }
@@ -503,8 +494,4 @@ class MainActivity : AppCompatActivity() {
             0
         )
     }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> c68f204e49a3e38ccf07dc22f7ef1c87b1d3c321

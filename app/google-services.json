@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "68855513655",
+    "firebase_url": "https://my-skin-id-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "my-skin-id",
+    "storage_bucket": "my-skin-id.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:68855513655:android:84a434dbdcffad6306b5b2",
+        "android_client_info": {
+          "package_name": "com.example.myskinid"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUzDjPZlVZdtyRg4MbcJKipBqPdve_xGI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:68855513655:android:934fe5c5f87cb77606b5b2",
+        "android_client_info": {
+          "package_name": "com.example.skinidchatbot2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUzDjPZlVZdtyRg4MbcJKipBqPdve_xGI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

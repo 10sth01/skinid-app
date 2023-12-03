@@ -2,6 +2,7 @@ package com.example.skinidchatbot2
 
 import android.Manifest
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -14,16 +15,25 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.ImageView
 import android.widget.PopupWindow
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.skinidchatbot2.databinding.ActivityMainBinding
 import com.example.skinidchatbot2.ml.ClassificationModel
+<<<<<<< HEAD
+=======
+import com.google.firebase.database.FirebaseDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+>>>>>>> c68f204e49a3e38ccf07dc22f7ef1c87b1d3c321
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.image.TensorImage
@@ -35,9 +45,18 @@ class MainActivity : AppCompatActivity() {
     lateinit var imagepopup: PopupWindow
     private val CAMERA_REQUEST_CODE = 100
     private val GALLERY_REQUEST_CODE = 200
+<<<<<<< HEAD
     private lateinit var yesButton: Button
     private lateinit var noButton: Button
     val imageDisplay = findViewById<ImageView>(R.id.image_display)
+=======
+    var class_1_vote = 0
+    var class_2_vote = 0
+    var buttonsClicked = false
+    var initialPrediction: List<String> = listOf()
+
+    val dbSkinConditions = FirebaseDatabase.getInstance().getReference("conditions");
+>>>>>>> c68f204e49a3e38ccf07dc22f7ef1c87b1d3c321
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mainActivity = ActivityMainBinding.inflate(layoutInflater)
@@ -49,6 +68,62 @@ class MainActivity : AppCompatActivity() {
         mainActivity.imageBtn.setOnClickListener{
             showPopup()
         }
+<<<<<<< HEAD
+=======
+
+        //resetPrivacyAgreementStatus() //for checking only
+
+        // Check if the agreement has been accepted
+        if (!isPrivacyAgreementAccepted()) {
+            showPrivacyAgreementDialog()
+        }
+    }
+
+    private val AGREEMENT_KEY = "privacy_agreement_accepted"
+
+    private fun isPrivacyAgreementAccepted(): Boolean {
+        val sharedPreferences = getPreferences(Context.MODE_PRIVATE)
+        val isAccepted = sharedPreferences.getBoolean(AGREEMENT_KEY, false)
+        Log.d("PrivacyAgreement", "Is Privacy Agreement Accepted: $isAccepted")
+        return isAccepted
+    }
+
+    private fun markPrivacyAgreementAccepted() {
+        val sharedPreferences = getPreferences(Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.putBoolean(AGREEMENT_KEY, true)
+        editor.apply()
+    }
+
+    //for resetting sharedPreferences to check pop up. checking purposes only. can be deleted.
+    private fun resetPrivacyAgreementStatus() {
+        val sharedPreferences = getPreferences(Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.putBoolean("privacy_agreement_accepted", false)
+        editor.apply()
+    }
+
+    private fun showPrivacyAgreementDialog() {
+        val dialogText =
+            "Welcome to Skin ID!\n" +
+                    "\n" +
+                    "Before you start using our skin lesion identification services, please take a moment to review our privacy agreement. Your privacy and the security of your data are our top priorities.\n" +
+                    "\n" +
+                    "By using Skin ID, you consent to the processing of images of skin lesions for the purpose of identification. Your information will not be shared with third parties.\n" +
+                    "\n" +
+                    "Thank you for choosing Skin ID!"
+
+        val dialog = AlertDialog.Builder(this)
+            .setMessage(dialogText)
+            .setCancelable(false)
+            .setPositiveButton("Accept") { _: DialogInterface, _: Int ->
+                // Update SharedPreferences whether the agreement is accepted
+                markPrivacyAgreementAccepted()
+            }
+            .create()
+
+        dialog.show()
+>>>>>>> c68f204e49a3e38ccf07dc22f7ef1c87b1d3c321
     }
 
     private fun resizeBitmap(originalBitmap: Bitmap, targetWidth: Int, targetHeight: Int): Bitmap {
@@ -97,12 +172,213 @@ class MainActivity : AppCompatActivity() {
         return classLabels
     }
 
+    private suspend fun fetchConditionData(conditionName: String): Condition? {
+        val database = FirebaseDatabase.getInstance().getReference("conditions")
+        val snapshot = database.child(conditionName).get().await()
+
+        return if (snapshot.exists()) {
+            val causes = snapshot.child("causes").children.map { Cause(it.value as String) }
+            val description = snapshot.child("description").value as String
+            val symptoms = snapshot.child("symptoms").children.map { Symptom(it.value as String) }
+            val treatment = snapshot.child("treatment").children.map { Treatment(it.value as String) }
+
+            Condition(causes, description, symptoms, treatment)
+        } else {
+            null
+        }
+    }
+
+    private fun <T> buildSectionText(items: List<T>, textExtractor: (T) -> String): String {
+        val stringBuilder = StringBuilder()
+        for (item in items) {
+            stringBuilder.append(" - ${textExtractor(item)}\n")
+        }
+        return stringBuilder.toString()
+    }
+
+    private fun showDiagnosisPopup(conditionName: String, condition: Condition) {
+        val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val popupView: View = inflater.inflate(R.layout.diagnosis_popup, null)
+
+        // Populate the popup layout with data from the Condition object
+        val titleTextView: TextView = popupView.findViewById(R.id.popupTitle)
+        titleTextView.text = conditionName
+
+        val descriptionTextView: TextView = popupView.findViewById(R.id.descriptionTextView)
+        descriptionTextView.text = condition.description
+
+        // Populate Causes
+        val causesTextView: TextView = popupView.findViewById(R.id.causesTextView)
+        causesTextView.text = buildSectionText(condition.causes) { it.cause }
+
+        // Populate Symptoms
+        val symptomsTextView: TextView = popupView.findViewById(R.id.symptomsTextView)
+        symptomsTextView.text = buildSectionText(condition.symptoms) { it.symptom }
+
+        // Populate Treatment
+        val treatmentTextView: TextView = popupView.findViewById(R.id.treatmentTextView)
+        treatmentTextView.text = buildSectionText(condition.treatment) { it.treatment }
+
+        // Show the popup
+        val diagnosisPopup = PopupWindow(
+            popupView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        )
+
+        // Close the popup
+        val closeButton: Button = popupView.findViewById(R.id.closeButton)
+        closeButton.setOnClickListener {
+            diagnosisPopup.dismiss()
+            mainActivity.questionTextView.text = "Hey there! I'm Skin ID. I can spot acne, eczema, psoriasis, rosacea, and warts. Snap a pic to begin!"
+            mainActivity.imageBtn.visibility = View.VISIBLE
+        }
+
+        diagnosisPopup.animationStyle = com.google.android.material.R.style.Animation_Design_BottomSheetDialog
+
+        diagnosisPopup.showAtLocation(
+            mainActivity.root,
+            Gravity.CENTER,
+            0,
+            0
+        )
+    }
+
+    private fun finalPrediction(initialPrediction:List<String>, class_1_vote:Int, class_2_vote:Int): String {
+
+        var finalPrediction: String
+
+        if ("healthy" in initialPrediction) {
+            if (initialPrediction.elementAt(0) == "healthy") {
+                var overall_score = class_2_vote
+                if (overall_score > 2) {
+                    finalPrediction = initialPrediction.elementAt(1)
+                } else {
+                    finalPrediction = "You do not have a skin lesion"
+                }
+            } else {
+                var overall_score = class_1_vote
+                if (overall_score > 2) {
+                    finalPrediction = initialPrediction.elementAt(0)
+                } else {
+                    finalPrediction = "You do not have a skin lesion"
+                }
+            }
+        } else {
+            if (class_1_vote > class_2_vote) {
+                finalPrediction = initialPrediction.elementAt(0)
+            } else if (class_2_vote > class_1_vote) {
+                finalPrediction = initialPrediction.elementAt(1)
+            } else {
+                finalPrediction = initialPrediction.elementAt(0)
+            }
+        }
+        return finalPrediction
+    }
+    private suspend fun queryUser(initialPrediction: List<String>) {
+        var top_class_1 = initialPrediction.elementAt(0)
+        var top_class_2 = initialPrediction.elementAt(1)
+        class_1_vote = 0
+        class_2_vote = 0
+        var questionIndex = 1
+
+        for (i in 0..1) {
+            questionIndex = 1
+            val skinCondition = initialPrediction.elementAt(i)
+            if (initialPrediction.elementAt(i) == "healthy") {
+                continue
+            } else {
+
+                while (questionIndex < 6) {
+
+                    val database = FirebaseDatabase.getInstance().getReference("conditions")
+                    val snapshot = database.child(initialPrediction.elementAt(i)).get().await()
+
+                    if (questionIndex < 5) {
+
+                        if (snapshot.exists()) {
+                            val question = snapshot.child("questions").child("question$questionIndex").value
+                            mainActivity.questionTextView.text = ""
+                            mainActivity.questionTextView.text = question.toString()
+                            mainActivity.yesButton.visibility = View.VISIBLE
+                            mainActivity.noButton.visibility = View.VISIBLE
+                        }
+                    }
+
+                    buttonsClicked = false
+                    mainActivity.yesButton.setOnClickListener() {
+                        if (!buttonsClicked) {
+                            if (i == 0) {
+                                class_1_vote += 1
+                            } else {
+                                class_2_vote += 1
+                            }
+                            buttonsClicked = true
+                            questionIndex += 1
+                            if (questionIndex < 6) {
+                                if (snapshot.exists()) {
+                                    val question = snapshot.child("questions").child("question$questionIndex").value
+                                    mainActivity.questionTextView.text = ""
+                                    mainActivity.questionTextView.text = question.toString()
+                                    mainActivity.yesButton.visibility = View.VISIBLE
+                                    mainActivity.noButton.visibility = View.VISIBLE
+                                    buttonsClicked = false
+                                }
+                            }
+                        }
+                    }
+
+                    mainActivity.noButton.setOnClickListener() {
+                        if (!buttonsClicked) {
+                            buttonsClicked = true
+                            questionIndex += 1
+                            if (questionIndex < 6) {
+                                if (snapshot.exists()) {
+                                    val question = snapshot.child("questions").child("question$questionIndex").value
+                                    mainActivity.questionTextView.text = ""
+                                    mainActivity.questionTextView.text = question.toString()
+                                    mainActivity.yesButton.visibility = View.VISIBLE
+                                    mainActivity.noButton.visibility = View.VISIBLE
+                                    buttonsClicked = false
+                                }
+                            }
+                        }
+                    }
+                }
+                continue
+            }
+        }
+        val conditionName = finalPrediction(initialPrediction, class_1_vote, class_2_vote)
+        val conditionData = fetchConditionData(conditionName)
+
+        if (conditionData != null) {
+            showDiagnosisPopup(conditionName, conditionData)
+            mainActivity.questionTextView.text = "Hey there! I'm Skin ID. I can spot acne, eczema, psoriasis, rosacea, and warts. Snap a pic to begin!"
+        } else {
+            mainActivity.questionTextView.text = "You do not have a skin lesion"
+        }
+        mainActivity.yesButton.visibility = View.GONE
+        mainActivity.noButton.visibility = View.GONE
+
+        mainActivity.imageDisplay.setImageBitmap(null)
+    }
+
     private val cameraActivityResultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
                 val imageBitmap = result.data?.extras?.get("data") as Bitmap
                 val resizedBitmap = resizeBitmap(imageBitmap, 224, 224)
+<<<<<<< HEAD
 
+=======
+                mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
+                initialPrediction = classifyImage(this, resizedBitmap)
+                CoroutineScope(Dispatchers.Main).launch {
+                    queryUser(initialPrediction)
+                }
+                hidePopup()
+>>>>>>> c68f204e49a3e38ccf07dc22f7ef1c87b1d3c321
             }
         }
 
@@ -116,7 +392,16 @@ class MainActivity : AppCompatActivity() {
                     val image = BitmapFactory.decodeFileDescriptor(fileDescriptor)
                     parcelFileDescriptor.close()
                     val resizedBitmap = resizeBitmap(image, 224, 224)
+<<<<<<< HEAD
 
+=======
+                    mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
+                    initialPrediction = classifyImage(this, resizedBitmap)
+                    CoroutineScope(Dispatchers.Main).launch {
+                        queryUser(initialPrediction)
+                    }
+                    hidePopup()
+>>>>>>> c68f204e49a3e38ccf07dc22f7ef1c87b1d3c321
                 } else {
                     Toast.makeText(this, "No image selected", Toast.LENGTH_SHORT).show()
                 }
@@ -136,6 +421,12 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
                 }
             }
+        }
+    }
+
+    private fun hidePopup() {
+        if (::imagepopup.isInitialized && imagepopup.isShowing) {
+            imagepopup.dismiss()
         }
     }
 
@@ -163,7 +454,7 @@ class MainActivity : AppCompatActivity() {
                         galleryActivityResultLauncher.launch(galleryIntent)
                     }
                 }
-        }
+            }
             else {
                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                     // launch gallery intent
@@ -212,4 +503,8 @@ class MainActivity : AppCompatActivity() {
             0
         )
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> c68f204e49a3e38ccf07dc22f7ef1c87b1d3c321

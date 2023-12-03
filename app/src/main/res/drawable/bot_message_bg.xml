@@ -4,10 +4,13 @@
         android:top="2dp"
         android:right="2dp"
         android:bottom="2dp" />
+<<<<<<< HEAD
     <corners
         android:bottomLeftRadius="20dp"
         android:bottomRightRadius="20dp"
         android:topLeftRadius="20dp"
         android:topRightRadius="20dp" />
+=======
+>>>>>>> c68f204e49a3e38ccf07dc22f7ef1c87b1d3c321
     <solid android:color="@color/white" />
 </shape>

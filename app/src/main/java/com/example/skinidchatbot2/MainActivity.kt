@@ -45,7 +45,7 @@ class MainActivity : AppCompatActivity() {
     var class_1_vote = 0
     var class_2_vote = 0
     var buttonsClicked = false
-    var initialPrediction: List<String> = listOf()
+    var initialPrediction: Pair<String, Float> = "" to 0.0f
 
     val dbSkinConditions = FirebaseDatabase.getInstance().getReference("conditions");
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,7 +119,7 @@ class MainActivity : AppCompatActivity() {
         return Bitmap.createScaledBitmap(originalBitmap, targetWidth, targetHeight, true)
     }
 
-    private fun classifyImage(context: Context, bitmap: Bitmap): List<String> {
+    private fun classifyImage(context: Context, bitmap: Bitmap): Pair<String, Float> {
         var tensorImage = TensorImage(DataType.FLOAT32)
         tensorImage.load(bitmap)
 
@@ -139,27 +139,35 @@ class MainActivity : AppCompatActivity() {
         // Extract prediction result
         val predictions = outputFeature0.floatArray
 
+        val confidenceThreshold = 0.9f
+
         // List of class names
-        val classNames = listOf("acne", "alopecia areata", "eczema", "healthy", "psoriasis",
-            "raynaud's syndrome", "rosacea", "vitiligo", "warts")
+        val classNames = listOf("acne", "alopecia areata", "eczema", "psoriasis",
+            "rosacea", "vitiligo", "warts")
 
         // Pair each class label with its probability
-        val classProbabilities = mutableListOf<Triple<String, Float, String>>()
+        val categorizedPredictions = mutableListOf<Pair<String, Float>>()
 
         for (i in predictions.indices) {
             val className = classNames.getOrNull(i) ?: "unknown"
-            classProbabilities.add(Triple("Class $i", predictions[i], className))
+            val confidence = predictions[i]
+
+            if (confidence >= confidenceThreshold) {
+                categorizedPredictions.add(Pair(className, confidence))
+            } else {
+                categorizedPredictions.add(Pair("None", 0.0f))
+            }
         }
 
-        // Sort the probabilities in descending order
-        val sortedProbabilities = classProbabilities.sortedByDescending { it.second }
+        model.close() // Release model resources
 
-        // Take the top 2 probable classes
-        val top2Classes = sortedProbabilities.take(2)
+        val orderedPredictions = categorizedPredictions.sortedByDescending{it.second}
 
-        val classLabels = top2Classes.map { it.third}
+        val firstPrediction = orderedPredictions[0]
+        val className = firstPrediction.first
+        val confidence = firstPrediction.second
 
-        return classLabels
+        return Pair(className, confidence)
     }
 
     private suspend fun fetchConditionData(conditionName: String): Condition? {
@@ -237,7 +245,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun finalPrediction(initialPrediction:List<String>, class_1_vote:Int, class_2_vote:Int): String {
+   /* private fun finalPrediction(initialPrediction:List<String>, class_1_vote:Int, class_2_vote:Int): String {
 
         var finalPrediction: String
 
@@ -269,8 +277,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
         return finalPrediction
-    }
-    private suspend fun queryUser(initialPrediction: List<String>) {
+    }*/
+
+    /*private suspend fun queryUser(categorizedPredictions: List<String>) {
         var top_class_1 = initialPrediction.elementAt(0)
         var top_class_2 = initialPrediction.elementAt(1)
         class_1_vote = 0
@@ -361,7 +370,7 @@ class MainActivity : AppCompatActivity() {
         mainActivity.imageBtn.visibility = View.VISIBLE
 
         mainActivity.imageDisplay.setImageBitmap(null)
-    }
+    }*/
 
     private val cameraActivityResultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -370,8 +379,25 @@ class MainActivity : AppCompatActivity() {
                 val resizedBitmap = resizeBitmap(imageBitmap, 224, 224)
                 mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
                 initialPrediction = classifyImage(this, resizedBitmap)
-                CoroutineScope(Dispatchers.Main).launch {
-                    queryUser(initialPrediction)
+                if (initialPrediction.first != "None") {
+                    CoroutineScope(Dispatchers.Main).launch {
+
+                        val conditionData = fetchConditionData(initialPrediction.first);
+
+                        if (conditionData != null) {
+                            showDiagnosisPopup(initialPrediction.first, conditionData)
+                            mainActivity.questionTextView.text = "Hey there! I'm Skin ID. I can spot acne, " +
+                                    "alopecia areata, eczema, psoriasis, Raynaud's syndrome, rosacea, vitiligo " +
+                                    "and warts. Snap a pic to begin!"
+                        } else {
+                            mainActivity.questionTextView.text = "No skin lesion detected."
+                        }
+
+                        mainActivity.imageDisplay.setImageBitmap(null)
+
+                    }
+                } else {
+                    mainActivity.questionTextView.text = "No skin lesion detected."
                 }
                 hidePopup()
             }
@@ -389,8 +415,26 @@ class MainActivity : AppCompatActivity() {
                     val resizedBitmap = resizeBitmap(image, 224, 224)
                     mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
                     initialPrediction = classifyImage(this, resizedBitmap)
-                    CoroutineScope(Dispatchers.Main).launch {
-                        queryUser(initialPrediction)
+
+                    if (initialPrediction.first != "None") {
+                        CoroutineScope(Dispatchers.Main).launch {
+
+                            val conditionData = fetchConditionData(initialPrediction.first);
+
+                            if (conditionData != null) {
+                                showDiagnosisPopup(initialPrediction.first, conditionData)
+                                mainActivity.questionTextView.text = "Hey there! I'm Skin ID. I can spot acne, " +
+                                        "alopecia areata, eczema, psoriasis, Raynaud's syndrome, rosacea, vitiligo " +
+                                        "and warts. Snap a pic to begin!"
+                            } else {
+                                mainActivity.questionTextView.text = "No skin lesion detected."
+                            }
+
+                            mainActivity.imageDisplay.setImageBitmap(null)
+
+                        }
+                    } else {
+                        mainActivity.questionTextView.text = "No skin lesion detected."
                     }
                     hidePopup()
                 } else {

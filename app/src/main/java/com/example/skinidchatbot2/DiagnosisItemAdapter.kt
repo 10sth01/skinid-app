@@ -1,6 +1,5 @@
 package com.example.skinidchatbot2
 
-// Android framework imports
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,7 +12,8 @@ import androidx.recyclerview.widget.RecyclerView
  *
  *  @param itemList the list of diagnosis items to display.
  */
-class DiagnosisItemAdapter(private val itemList: List<String>) : RecyclerView.Adapter<DiagnosisItemAdapter.ViewHolder>() {
+class DiagnosisItemAdapter(private val itemList: List<String>) :
+    RecyclerView.Adapter<DiagnosisItemAdapter.ViewHolder>() {
 
     /**
      * Called when RecyclerView needs a new [ViewHolder] of the given type to represent an item.

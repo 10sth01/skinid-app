@@ -78,37 +78,13 @@
         android:layout_marginTop="40dp" />
 
     <ImageButton
-        android:id="@+id/yesButton"
-        android:layout_width="70dp"
-        android:layout_height="70dp"
-        android:background="@drawable/yes_btn_bg"
-        app:layout_constraintTop_toBottomOf="@+id/questionTextView"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/noButton"
-        android:layout_marginTop="20dp"
-        android:visibility="gone"
-    />
-
-    <ImageButton
-        android:id="@+id/noButton"
-        android:layout_width="70dp"
-        android:layout_height="70dp"
-        android:background="@drawable/no_btn_bg"
-        app:layout_constraintTop_toBottomOf="@+id/questionTextView"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/yesButton"
-        android:layout_marginTop="20dp"
-        android:visibility="gone"
-    />
-
-
-    <ImageButton
         android:id="@+id/image_btn"
         android:layout_width="70dp"
         android:layout_height="70dp"
         android:background="@drawable/custom_button_background"
         android:scaleType="centerInside"
         android:src="@drawable/ic_camera"
+        android:contentDescription="@string/camera_btn_desc"
         app:tint="@android:color/white"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

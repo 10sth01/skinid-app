@@ -1,3 +1,7 @@
 <resources>
+    <!-- Application name -->
     <string name="app_name">SkinID</string>
+
+    <!-- Description Strings -->
+    <string name="camera_btn_desc">A button for uploading or capturing photos.</string>
 </resources>

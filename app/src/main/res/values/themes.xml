@@ -5,7 +5,7 @@
         <!-- Primary Brand Color -->
         <item name="colorPrimary">@color/orange</item>
         <!-- Status Bar Color -->
-        <item name="android:statusBarColor" tools:targetApi="1">?attr/colorPrimary</item>
+        <item name="android:statusBarColor" >?attr/colorPrimary</item>
         <item name="android:navigationBarColor">?attr/colorPrimary</item>
     </style>
 </resources>

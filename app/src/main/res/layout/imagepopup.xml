@@ -18,13 +18,13 @@
             android:id="@+id/upload_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Upload Image"/>
+            android:text="@string/upload_btn"/>
 
         <Button
             android:id="@+id/capture_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Capture Image"/>
+            android:text="capture_btn"/>
 
     </LinearLayout>
 

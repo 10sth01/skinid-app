@@ -1,7 +1,25 @@
 <resources>
+
     <!-- Application name -->
-    <string name="app_name">SkinID</string>
+    <string name="app_name">Skin ID</string>
 
     <!-- Description Strings -->
     <string name="camera_btn_desc">A button for uploading or capturing photos.</string>
+
+    <!-- Displayed messages -->
+    <string name="home_greeting">Hey there! I\'m Skin ID. I can spot acne, alopecia areata, eczema,
+        psoriasis, Raynaud\'s syndrome, rosacea, vitiligo and warts. Snap a pic to begin!</string>
+
+    <!-- Output window strings -->
+    <string name="output_header">Skin Lesion Information</string>
+    <string name="description_header">Description: </string>
+    <string name="causes_header">Causes: </string>
+    <string name="symptoms_header">Symptoms: </string>
+    <string name="treatment_header">Treament: </string>
+
+    <!-- Button Strings -->
+    <string name="close_btn">Close</string>
+    <string name="upload_btn">Upload Image</string>
+    <string name="capture_btn">Capture Image</string>
+
 </resources>

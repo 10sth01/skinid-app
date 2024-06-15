@@ -24,7 +24,7 @@
                 android:id="@+id/popupTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Skin Lesion Information"
+                android:text="@string/output_header"
                 android:textSize="24sp"
                 android:textStyle="bold"
                 android:textAllCaps="true"
@@ -37,14 +37,14 @@
                 android:id="@+id/descriptionTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Description: "
+                android:text="@string/description_header"
                 android:textSize="16sp"
                 android:layout_marginTop="8dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Causes: "
+                android:text="@string/causes_header"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/holo_orange_light"
@@ -61,7 +61,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Symptoms: "
+                android:text="@string/symptoms_header"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/holo_orange_light"
@@ -78,7 +78,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Treatment: "
+                android:text="@string/treatment_header"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/holo_orange_light"
@@ -96,7 +96,7 @@
                 android:id="@+id/closeButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Close"
+                android:text="@string/close_btn"
                 android:layout_gravity="center"
                 android:layout_marginTop="16dp"/>
         </LinearLayout>

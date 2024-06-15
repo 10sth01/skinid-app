@@ -1,4 +1,4 @@
-# SkinID Chatbot App
+# SkinID App
 
 SkinID Chatbot is an Android application developed in Kotlin that allows users to interact with a chatbot for skin-related queries. The chatbot provides information about various skin conditions, symptoms, causes, and treatments.
 

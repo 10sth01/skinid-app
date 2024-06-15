@@ -203,7 +203,7 @@ class MainActivity : AppCompatActivity() {
     // Show a popup with the diagnosis information
     private fun showDiagnosisPopup(conditionName: String, condition: Condition) {
         val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        val popupView: View = inflater.inflate(R.layout.diagnosis_popup, null)
+        val popupView: View = inflater.inflate(R.layout.diagnosis_popup, mainActivity.root, false)
 
         // Populate the popup layout with data from the Condition object
         val titleTextView: TextView = popupView.findViewById(R.id.popupTitle)
@@ -372,7 +372,7 @@ class MainActivity : AppCompatActivity() {
     // Show a popup window with options to capture or upload an image
     private fun showPopup() {
         val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        val popupView: View = inflater.inflate(R.layout.imagepopup, null)
+        val popupView: View = inflater.inflate(R.layout.imagepopup, mainActivity.root, false)
 
         // Set up the upload button
         val uploadButton: Button = popupView.findViewById(R.id.upload_button)

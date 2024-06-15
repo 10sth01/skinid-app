@@ -236,9 +236,7 @@ class MainActivity : AppCompatActivity() {
         val closeButton: Button = popupView.findViewById(R.id.closeButton)
         closeButton.setOnClickListener {
             diagnosisPopup.dismiss()
-            mainActivity.questionTextView.text = "Hey there! I'm Skin ID. I can spot acne, " +
-                    "alopecia areata, eczema, psoriasis, Raynaud's syndrome, rosacea, vitiligo " +
-                    "and warts. Snap a pic to begin!"
+            mainActivity.questionTextView.text = getString(R.string.home_greeting)
             mainActivity.imageBtn.visibility = View.VISIBLE
         }
 
@@ -269,16 +267,13 @@ class MainActivity : AppCompatActivity() {
                 if (initialPrediction.first != "None") {
                     CoroutineScope(Dispatchers.Main).launch {
 
-                        val conditionData = fetchConditionData(initialPrediction.first);
+                        val conditionData = fetchConditionData(initialPrediction.first)
 
                         if (conditionData != null) {
                             showDiagnosisPopup(initialPrediction.first, conditionData)
-                            mainActivity.questionTextView.text =
-                                "Hey there! I'm Skin ID. I can spot acne, " +
-                                        "alopecia areata, eczema, psoriasis, Raynaud's syndrome, rosacea, vitiligo " +
-                                        "and warts. Snap a pic to begin!"
+                            mainActivity.questionTextView.text = getString(R.string.home_greeting)
                         } else {
-                            mainActivity.questionTextView.text = "No skin lesion detected."
+                            mainActivity.questionTextView.text = getString(R.string.detected_false)
                         }
 
                         // Clear the ImageView after displaying the diagnosis
@@ -286,7 +281,7 @@ class MainActivity : AppCompatActivity() {
 
                     }
                 } else {
-                    mainActivity.questionTextView.text = "No skin lesion detected."
+                    mainActivity.questionTextView.text = getString(R.string.detected_false)
                 }
                 hidePopup()
             }
@@ -319,19 +314,16 @@ class MainActivity : AppCompatActivity() {
 
                             if (conditionData != null) {
                                 showDiagnosisPopup(initialPrediction.first, conditionData)
-                                mainActivity.questionTextView.text =
-                                    "Hey there! I'm Skin ID. I can spot acne, " +
-                                            "alopecia areata, eczema, psoriasis, Raynaud's syndrome, rosacea, vitiligo " +
-                                            "and warts. Snap a pic to begin!"
+                                mainActivity.questionTextView.text = getString(R.string.home_greeting)
                             } else {
-                                mainActivity.questionTextView.text = "No skin lesion detected."
+                                mainActivity.questionTextView.text = getString(R.string.detected_false)
                             }
                             // Clear the ImageView after displaying the diagnosis
                             mainActivity.imageDisplay.setImageBitmap(null)
 
                         }
                     } else {
-                        mainActivity.questionTextView.text = "No skin lesion detected."
+                        mainActivity.questionTextView.text = getString(R.string.detected_false)
                     }
                     hidePopup()
                 } else {

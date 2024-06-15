@@ -36,7 +36,6 @@ android {
     }
     buildFeatures {
         compose true
-        dataBinding true
         mlModelBinding true
     }
     composeOptions {

@@ -50,7 +50,10 @@ class MainActivity : AppCompatActivity() {
 
     var initialPrediction: Pair<String, Float> = "" to 0.0f
 
-    val dbSkinConditions = FirebaseDatabase.getInstance().getReference("conditions");
+    // Initialize Constants
+    val target_height = 224
+    val target_width = 224
+
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
@@ -114,13 +117,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     // Resize a given bitmap to the target width and height
-    private fun resizeBitmap(originalBitmap: Bitmap, targetWidth: Int, targetHeight: Int): Bitmap {
-        return Bitmap.createScaledBitmap(originalBitmap, targetWidth, targetHeight, true)
+    private fun resizeBitmap(originalBitmap: Bitmap): Bitmap {
+        return Bitmap.createScaledBitmap(originalBitmap, target_width, target_height, true)
     }
 
     // Classify image using TensorFlow
     private fun classifyImage(context: Context, bitmap: Bitmap): Pair<String, Float> {
-        var tensorImage = TensorImage(DataType.FLOAT32)
+        val tensorImage = TensorImage(DataType.FLOAT32)
         tensorImage.load(bitmap)
 
         val model = ClassificationModel.newInstance(context)
@@ -258,7 +261,7 @@ class MainActivity : AppCompatActivity() {
                 // Get the captured image as a Bitmap
                 val imageBitmap = result.data?.extras?.get("data") as Bitmap
                 // Resize image to required dimensions
-                val resizedBitmap = resizeBitmap(imageBitmap, 224, 224)
+                val resizedBitmap = resizeBitmap(imageBitmap)
                 // Display resized image in the ImageView
                 mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
                 // Classify image and store the initial prediction
@@ -302,7 +305,7 @@ class MainActivity : AppCompatActivity() {
                     val image = BitmapFactory.decodeFileDescriptor(fileDescriptor)
                     parcelFileDescriptor.close()
                     // Resize the image to the required dimensions for the model
-                    val resizedBitmap = resizeBitmap(image, 224, 224)
+                    val resizedBitmap = resizeBitmap(image)
                     // Display the resized image in the ImageView
                     mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
                     initialPrediction = classifyImage(this, resizedBitmap)
@@ -310,7 +313,7 @@ class MainActivity : AppCompatActivity() {
                     if (initialPrediction.first != "None") {
                         CoroutineScope(Dispatchers.Main).launch {
 
-                            val conditionData = fetchConditionData(initialPrediction.first);
+                            val conditionData = fetchConditionData(initialPrediction.first)
 
                             if (conditionData != null) {
                                 showDiagnosisPopup(initialPrediction.first, conditionData)

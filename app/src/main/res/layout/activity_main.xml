@@ -51,7 +51,7 @@
         android:layout_marginTop="70dp"
         android:scaleType="fitXY"
         android:adjustViewBounds="true"
-        android:background="@drawable/bot_message_bg"
+        android:background="@drawable/image_display_bg"
         android:clipToOutline="true"
         app:elevation="8dp"
         app:layout_constraintBottom_toTopOf="@id/image_btn"

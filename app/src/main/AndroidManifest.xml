@@ -5,19 +5,26 @@
 
     <!-- User permissions -->
 
-    <!-- Devices running Android 12L (API level 32) or lower -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <!-- Gallery permission for devices running Android 12L (API level 32) or lower -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"/>
 
-    <!-- Devices running Android 13 (API level 33) or higher -->
+    <!-- Gallery permission for devices running Android 13 (API level 33) or higher -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
 
-    <!-- To handle reselection in devices running Android 14 or higher (API level 34+) -->
+    <!-- Gallery permission to handle reselection in devices running Android 14
+    or higher (API level 34+) -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"/>
 
+    <!-- Network permissions -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Camera permission -->
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- Declaration of camera use -->
     <uses-feature android:name="android.hardware.camera" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -28,6 +35,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SkinIDChatbot2"
         tools:targetApi="31">
+
         <activity android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
@@ -35,5 +43,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
     </application>
+
 </manifest>

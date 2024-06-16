@@ -168,16 +168,13 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Samantha Sampot - sampotsamantha@gmail.com
-Francheska Christine Mojica - cheskacmojica@gmail.com
-Lalaine Joy Bejarin - blc0385@dlsud.edu.ph
+* Samantha Sampot - sampotsamantha@gmail.com
+* Francheska Christine Mojica - cheskacmojica@gmail.com
+* Lalaine Joy Bejarin - blc0385@dlsud.edu.ph
 
 Project Link: [https://github.com/10sth01/skinid-app](https://github.com/10sth01/skinid-app)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->

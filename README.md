@@ -22,7 +22,6 @@
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
 
 <!-- PROJECT LOGO -->
 <br />
@@ -186,5 +185,4 @@ Project Link: [https://github.com/10sth01/skinid-app](https://github.com/10sth01
 [stars-url]: https://github.com/10sth01/skinid-app/stargazers
 [issues-shield]: https://img.shields.io/github/issues/10sth01/skinid-app.svg?style=for-the-badge
 [issues-url]: https://github.com/10sth01/skinid-app/issues
-[license-shield]: https://img.shields.io/github/license/10sth01/skinid-app.svg?style=for-the-badge
-[license-url]: https://github.com/10sth01/skinid-app/blob/master/LICENSE.txt
+

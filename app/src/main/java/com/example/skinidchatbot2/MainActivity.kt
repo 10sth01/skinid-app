@@ -245,8 +245,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    private fun imageUriPreprocessor(ImageUri: Uri)
-    {
+    private fun imageUriPreprocessor(ImageUri: Uri) {
         // Open a file descriptor for the selected image
         val parcelFileDescriptor =
             contentResolver.openFileDescriptor(ImageUri, "r")
@@ -261,8 +260,7 @@ class MainActivity : AppCompatActivity() {
         prediction = classifyImage(this, resizedBitmap)
     }
 
-    private fun capturedImagePreprocessor(result: ActivityResult)
-    {
+    private fun capturedImagePreprocessor(result: ActivityResult) {
         if (result.resultCode == RESULT_OK) {
 
             val imageBitmap = result.data?.extras?.get("data") as Bitmap
@@ -277,8 +275,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun displayPrediction(prediction: Pair<String, Float>)
-    {
+    private fun displayPrediction(prediction: Pair<String, Float>) {
         if (prediction.first != "None") {
             CoroutineScope(Dispatchers.Main).launch {
 
@@ -294,8 +291,7 @@ class MainActivity : AppCompatActivity() {
                 mainActivity.imageDisplay.setImageBitmap(null)
 
             }
-        }
-        else {
+        } else {
             mainActivity.questionTextView.text = getString(R.string.detected_false)
         }
     }
@@ -326,8 +322,7 @@ class MainActivity : AppCompatActivity() {
                     imageUriPreprocessor(selectedImageUri)
                     displayPrediction(prediction)
                     hidePopup()
-                }
-                else {
+                } else {
                     Toast.makeText(this, "No image selected", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -336,7 +331,7 @@ class MainActivity : AppCompatActivity() {
     private fun launchGallery() {
         val galleryIntent =
             Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            galleryActivityResultLauncher.launch(galleryIntent)
+        galleryActivityResultLauncher.launch(galleryIntent)
     }
 
     private fun launchCamera() {
@@ -344,30 +339,34 @@ class MainActivity : AppCompatActivity() {
         cameraActivityResultLauncher.launch(cameraIntent)
     }
 
-//    // Handle permission request results
-//    override fun onRequestPermissionsResult(
-//        requestCode: Int,
-//        permissions: Array<out String>,
-//        grantResults: IntArray
-//    ) {
-//        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-//        when (requestCode) {
-//            GALLERY_REQUEST_CODE -> {
-//                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-//                    launchGallery()
-//                } else {
-//                    Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//            CAMERA_REQUEST_CODE -> {
-//                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-//                    launchCamera()
-//                } else {
-//                    Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//        }
-//    }
+    // Handle permission request results
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            GALLERY_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty()
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                ) {
+                    launchGallery()
+                } else {
+                    Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            CAMERA_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    launchCamera()
+                } else {
+                    Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
+                }
+
+            }
+        }
+    }
 
     // Show a popup window with options to capture or upload an image
     private fun showPopup() {
@@ -380,59 +379,12 @@ class MainActivity : AppCompatActivity() {
 
         // Handle upload button click
         uploadButton.setOnClickListener {
-
-            if (Build.VERSION.SDK_INT >= 33) {
-                if (ContextCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.READ_MEDIA_IMAGES
-                    ) == PackageManager.PERMISSION_GRANTED) {
-                    launchGallery()
-                } else {
-                    ActivityCompat.requestPermissions(
-                        this,
-                        arrayOf(Manifest.permission.READ_MEDIA_IMAGES),
-                        GALLERY_REQUEST_CODE
-                    )
-                }
-            } else {
-                if (ContextCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.READ_EXTERNAL_STORAGE
-                    ) == PackageManager.PERMISSION_GRANTED) {
-                    launchGallery()
-                } else {
-                    ActivityCompat.requestPermissions(
-                        this,
-                        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-                        GALLERY_REQUEST_CODE
-                    )
-                }
-            }
+            requestGalleryPermission()
         }
 
         // Handle capture button click
         captureButton.setOnClickListener {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.CAMERA
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                launchCamera()
-            } else {
-                // request camera intent
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.CAMERA),
-                    CAMERA_REQUEST_CODE
-                )
-                if (ContextCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.CAMERA
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    launchCamera()
-                }
-            }
+            requestCameraPermission()
         }
 
         // Initialize and show the popup window
@@ -453,4 +405,55 @@ class MainActivity : AppCompatActivity() {
             0
         )
     }
+
+    private fun requestGalleryPermission() {
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.READ_MEDIA_IMAGES
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                launchGallery()
+            } else {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.READ_MEDIA_IMAGES),
+                    GALLERY_REQUEST_CODE
+                )
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                launchGallery()
+            } else {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                    GALLERY_REQUEST_CODE
+                )
+            }
+        }
+    }
+
+    private fun requestCameraPermission() {
+
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.CAMERA
+            ) == CAMERA_REQUEST_CODE
+        ) {
+            launchCamera()
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.CAMERA),
+                CAMERA_REQUEST_CODE
+            )
+        }
+    }
+
 }

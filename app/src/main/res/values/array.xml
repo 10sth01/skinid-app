@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="classes">
+        <item>acne</item>
+        <item>alopecia areata</item>
+        <item>eczema</item>
+        <item>psoriasis</item>
+        <item>rosacea</item>
+        <item>vitiligo</item>
+        <item>warts</item>
+    </string-array>
+</resources>

@@ -7,6 +7,18 @@
     <string name="camera_btn_desc">A button for uploading or capturing photos.</string>
 
     <!-- Displayed messages -->
+    <string name="privacy_agreement">
+        Welcome to Skin ID!\n
+        \n
+        Before you start using our skin lesion identification services, please take a moment to
+        review our privacy agreement. Your privacy and the security of your data are our top
+        priorities.\n
+        \n
+        By using Skin ID, you consent to the processing of images of skin lesions for the purpose
+        of identification. Your information will not be shared with third parties.\n
+        \n
+        Thank you for choosing Skin ID!
+    </string>
     <string name="home_greeting">Hey there! I\'m Skin ID. I can spot acne, alopecia areata, eczema,
         psoriasis, Raynaud\'s syndrome, rosacea, vitiligo and warts. Snap a pic to begin!</string>
     <string name="detected_false">No skin lesion detected.</string>

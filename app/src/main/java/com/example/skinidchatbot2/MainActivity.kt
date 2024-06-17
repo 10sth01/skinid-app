@@ -1,12 +1,14 @@
 package com.example.skinidchatbot2
 
 import android.Manifest
+import android.app.Instrumentation
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.os.Bundle
@@ -19,6 +21,7 @@ import android.widget.Button
 import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -41,18 +44,17 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var mainActivity: ActivityMainBinding
 
-    // Popup window for image options
-    lateinit var imagepopup: PopupWindow
+    lateinit var imageUploadCapturePopup: PopupWindow
 
-    // Request codes for camera and gallery
     private val CAMERA_REQUEST_CODE = 100
     private val GALLERY_REQUEST_CODE = 200
 
-    var initialPrediction: Pair<String, Float> = "" to 0.0f
+    var prediction: Pair<String, Float> = "" to 0.0f
 
-    // Initialize Constants
     val target_height = 224
     val target_width = 224
+
+    private val AGREEMENT_KEY = "privacy_agreement_accepted"
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -64,20 +66,19 @@ class MainActivity : AppCompatActivity() {
         val linearLayoutManager = LinearLayoutManager(this)
         linearLayoutManager.orientation = LinearLayoutManager.VERTICAL
 
-        // upload/capture image button
-        mainActivity.imageBtn.setOnClickListener {
+        mainActivity.cameraButton.setOnClickListener {
             showPopup()
         }
 
-        // Show privacy agreement dialog if privacy agreement was rejected
         if (!isPrivacyAgreementAccepted()) {
             showPrivacyAgreementDialog()
         }
     }
 
-    private val AGREEMENT_KEY = "privacy_agreement_accepted"
+    /*
+    *   PRIVACY AGREEMENT
+    * */
 
-    // Check if the privacy agreement has been accepted
     private fun isPrivacyAgreementAccepted(): Boolean {
         val sharedPreferences = getPreferences(Context.MODE_PRIVATE)
         val isAccepted = sharedPreferences.getBoolean(AGREEMENT_KEY, false)
@@ -95,15 +96,7 @@ class MainActivity : AppCompatActivity() {
 
     // Show the privacy agreement dialog to the user
     private fun showPrivacyAgreementDialog() {
-        val dialogText =
-            "Welcome to Skin ID!\n" +
-                    "\n" +
-                    "Before you start using our skin lesion identification services, please take a moment to review our privacy agreement. Your privacy and the security of your data are our top priorities.\n" +
-                    "\n" +
-                    "By using Skin ID, you consent to the processing of images of skin lesions for the purpose of identification. Your information will not be shared with third parties.\n" +
-                    "\n" +
-                    "Thank you for choosing Skin ID!"
-
+        val dialogText = getString(R.string.privacy_agreement)
         val dialog = AlertDialog.Builder(this)
             .setMessage(dialogText)
             .setCancelable(false)
@@ -146,10 +139,7 @@ class MainActivity : AppCompatActivity() {
         val confidenceThreshold = 0.9f
 
         // List of class names
-        val classNames = listOf(
-            "acne", "alopecia areata", "eczema", "psoriasis",
-            "rosacea", "vitiligo", "warts"
-        )
+        val classNames = resources.getStringArray(R.array.classes)
 
         // Pair each class label with its probability
         val categorizedPredictions = mutableListOf<Pair<String, Float>>()
@@ -240,7 +230,7 @@ class MainActivity : AppCompatActivity() {
         closeButton.setOnClickListener {
             diagnosisPopup.dismiss()
             mainActivity.questionTextView.text = getString(R.string.home_greeting)
-            mainActivity.imageBtn.visibility = View.VISIBLE
+            mainActivity.cameraButton.visibility = View.VISIBLE
         }
 
         diagnosisPopup.animationStyle =
@@ -254,82 +244,90 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    // Register activity result launcher for the camera
-    private val cameraActivityResultLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == RESULT_OK) {
-                // Get the captured image as a Bitmap
-                val imageBitmap = result.data?.extras?.get("data") as Bitmap
-                // Resize image to required dimensions
-                val resizedBitmap = resizeBitmap(imageBitmap)
-                // Display resized image in the ImageView
-                mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
-                // Classify image and store the initial prediction
-                initialPrediction = classifyImage(this, resizedBitmap)
-                // If a prediction is made, fetch the condition data and show diagnosis popup
-                if (initialPrediction.first != "None") {
-                    CoroutineScope(Dispatchers.Main).launch {
 
-                        val conditionData = fetchConditionData(initialPrediction.first)
+    private fun imageUriPreprocessor(ImageUri: Uri)
+    {
+        // Open a file descriptor for the selected image
+        val parcelFileDescriptor =
+            contentResolver.openFileDescriptor(ImageUri, "r")
+        val fileDescriptor: FileDescriptor = parcelFileDescriptor!!.fileDescriptor
+        // Decode the file descriptor into a Bitmap
+        val image = BitmapFactory.decodeFileDescriptor(fileDescriptor)
+        parcelFileDescriptor.close()
+        // Resize the image to the required dimensions for the model
+        val resizedBitmap = resizeBitmap(image)
+        // Display the resized image in the ImageView
+        mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
+        prediction = classifyImage(this, resizedBitmap)
+    }
 
-                        if (conditionData != null) {
-                            showDiagnosisPopup(initialPrediction.first, conditionData)
-                            mainActivity.questionTextView.text = getString(R.string.home_greeting)
-                        } else {
-                            mainActivity.questionTextView.text = getString(R.string.detected_false)
-                        }
+    private fun capturedImagePreprocessor(result: ActivityResult)
+    {
+        if (result.resultCode == RESULT_OK) {
 
-                        // Clear the ImageView after displaying the diagnosis
-                        mainActivity.imageDisplay.setImageBitmap(null)
+            val imageBitmap = result.data?.extras?.get("data") as Bitmap
+            val resizedBitmap = resizeBitmap(imageBitmap)
 
-                    }
+            mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
+
+            prediction = classifyImage(this, resizedBitmap)
+
+            displayPrediction(prediction)
+            hidePopup()
+        }
+    }
+
+    private fun displayPrediction(prediction: Pair<String, Float>)
+    {
+        if (prediction.first != "None") {
+            CoroutineScope(Dispatchers.Main).launch {
+
+                val conditionData = fetchConditionData(prediction.first)
+
+                if (conditionData != null) {
+                    showDiagnosisPopup(prediction.first, conditionData)
+                    mainActivity.questionTextView.text = getString(R.string.home_greeting)
                 } else {
                     mainActivity.questionTextView.text = getString(R.string.detected_false)
                 }
-                hidePopup()
+                // Clear the ImageView after displaying the diagnosis
+                mainActivity.imageDisplay.setImageBitmap(null)
+
             }
+        }
+        else {
+            mainActivity.questionTextView.text = getString(R.string.detected_false)
+        }
+    }
+
+    // Hide the image popup window if showing
+    private fun hidePopup() {
+        if (::imageUploadCapturePopup.isInitialized && imageUploadCapturePopup.isShowing) {
+            imageUploadCapturePopup.dismiss()
+        }
+    }
+
+    // Register activity result launcher for the camera
+    private val cameraActivityResultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            capturedImagePreprocessor(result)
         }
 
     // Register activity result launcher for the gallery
     private val galleryActivityResultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+
             if (result.resultCode == RESULT_OK) {
+
                 // Get the selected image URI from the gallery
                 val selectedImageUri = result.data?.data
+
                 if (selectedImageUri != null) {
-                    // Open a file descriptor for the selected image
-                    val parcelFileDescriptor =
-                        contentResolver.openFileDescriptor(selectedImageUri, "r")
-                    val fileDescriptor: FileDescriptor = parcelFileDescriptor!!.fileDescriptor
-                    // Decode the file descriptor into a Bitmap
-                    val image = BitmapFactory.decodeFileDescriptor(fileDescriptor)
-                    parcelFileDescriptor.close()
-                    // Resize the image to the required dimensions for the model
-                    val resizedBitmap = resizeBitmap(image)
-                    // Display the resized image in the ImageView
-                    mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
-                    initialPrediction = classifyImage(this, resizedBitmap)
-                    // If a prediction is made, fetch the condition data and show diagnosis popup
-                    if (initialPrediction.first != "None") {
-                        CoroutineScope(Dispatchers.Main).launch {
-
-                            val conditionData = fetchConditionData(initialPrediction.first)
-
-                            if (conditionData != null) {
-                                showDiagnosisPopup(initialPrediction.first, conditionData)
-                                mainActivity.questionTextView.text = getString(R.string.home_greeting)
-                            } else {
-                                mainActivity.questionTextView.text = getString(R.string.detected_false)
-                            }
-                            // Clear the ImageView after displaying the diagnosis
-                            mainActivity.imageDisplay.setImageBitmap(null)
-
-                        }
-                    } else {
-                        mainActivity.questionTextView.text = getString(R.string.detected_false)
-                    }
+                    imageUriPreprocessor(selectedImageUri)
+                    displayPrediction(prediction)
                     hidePopup()
-                } else {
+                }
+                else {
                     Toast.makeText(this, "No image selected", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -354,13 +352,6 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
                 }
             }
-        }
-    }
-
-    // Hide the image popup window if showing
-    private fun hidePopup() {
-        if (::imagepopup.isInitialized && imagepopup.isShowing) {
-            imagepopup.dismiss()
         }
     }
 
@@ -474,17 +465,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Initialize and show the popup window
-        imagepopup = PopupWindow(
+        imageUploadCapturePopup = PopupWindow(
             popupView,
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
             true
         )
 
-        imagepopup.animationStyle =
+        imageUploadCapturePopup.animationStyle =
             com.google.android.material.R.style.Animation_Design_BottomSheetDialog
 
-        imagepopup.showAtLocation(
+        imageUploadCapturePopup.showAtLocation(
             mainActivity.root,
             Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL,
             0,

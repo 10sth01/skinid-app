@@ -53,7 +53,7 @@
         android:background="@drawable/image_display_bg"
         android:clipToOutline="true"
         app:elevation="8dp"
-        app:layout_constraintBottom_toTopOf="@id/image_btn"
+        app:layout_constraintBottom_toTopOf="@id/camera_button"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
@@ -76,7 +76,7 @@
         android:layout_marginTop="40dp" />
 
     <ImageButton
-        android:id="@+id/image_btn"
+        android:id="@+id/camera_button"
         android:layout_width="70dp"
         android:layout_height="70dp"
         android:background="@drawable/custom_button_background"

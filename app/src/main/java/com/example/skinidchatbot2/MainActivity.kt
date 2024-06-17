@@ -333,27 +333,41 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-    // Handle permission request results
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            GALLERY_REQUEST_CODE -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // Permission granted, launch gallery intent
-                    val galleryIntent =
-                        Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                    galleryActivityResultLauncher.launch(galleryIntent)
-                } else {
-                    // Permission denied, handle accordingly
-                    Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
+    private fun launchGallery() {
+        val galleryIntent =
+            Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            galleryActivityResultLauncher.launch(galleryIntent)
     }
+
+    private fun launchCamera() {
+        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        cameraActivityResultLauncher.launch(cameraIntent)
+    }
+
+//    // Handle permission request results
+//    override fun onRequestPermissionsResult(
+//        requestCode: Int,
+//        permissions: Array<out String>,
+//        grantResults: IntArray
+//    ) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+//        when (requestCode) {
+//            GALLERY_REQUEST_CODE -> {
+//                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//                    launchGallery()
+//                } else {
+//                    Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//            CAMERA_REQUEST_CODE -> {
+//                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//                    launchCamera()
+//                } else {
+//                    Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//        }
+//    }
 
     // Show a popup window with options to capture or upload an image
     private fun showPopup() {
@@ -366,72 +380,32 @@ class MainActivity : AppCompatActivity() {
 
         // Handle upload button click
         uploadButton.setOnClickListener {
+
             if (Build.VERSION.SDK_INT >= 33) {
-                if ((ContextCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.READ_EXTERNAL_STORAGE
-                    ) == PackageManager.PERMISSION_GRANTED) ||
-                    (ContextCompat.checkSelfPermission(
+                if (ContextCompat.checkSelfPermission(
                         this,
                         Manifest.permission.READ_MEDIA_IMAGES
-                    ) == PackageManager.PERMISSION_GRANTED)
-                ) {
-                    // launch gallery intent
-                    val galleryIntent =
-                        Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                    galleryActivityResultLauncher.launch(galleryIntent)
+                    ) == PackageManager.PERMISSION_GRANTED) {
+                    launchGallery()
                 } else {
-                    // Request gallery permission
                     ActivityCompat.requestPermissions(
                         this,
-                        arrayOf(
-                            Manifest.permission.READ_EXTERNAL_STORAGE,
-                            Manifest.permission.READ_MEDIA_IMAGES
-                        ),
+                        arrayOf(Manifest.permission.READ_MEDIA_IMAGES),
                         GALLERY_REQUEST_CODE
                     )
-                    if ((ContextCompat.checkSelfPermission(
-                            this,
-                            Manifest.permission.READ_EXTERNAL_STORAGE
-                        ) == PackageManager.PERMISSION_GRANTED) ||
-                        (ContextCompat.checkSelfPermission(
-                            this,
-                            Manifest.permission.READ_MEDIA_IMAGES
-                        ) == PackageManager.PERMISSION_GRANTED)
-                    ) {
-                        // launch gallery intent
-                        val galleryIntent =
-                            Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                        galleryActivityResultLauncher.launch(galleryIntent)
-                    }
                 }
             } else {
                 if (ContextCompat.checkSelfPermission(
                         this,
                         Manifest.permission.READ_EXTERNAL_STORAGE
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    // launch gallery intent
-                    val galleryIntent =
-                        Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                    galleryActivityResultLauncher.launch(galleryIntent)
+                    ) == PackageManager.PERMISSION_GRANTED) {
+                    launchGallery()
                 } else {
-                    // Request gallery permission
                     ActivityCompat.requestPermissions(
                         this,
                         arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
                         GALLERY_REQUEST_CODE
                     )
-                    if (ContextCompat.checkSelfPermission(
-                            this,
-                            Manifest.permission.READ_EXTERNAL_STORAGE
-                        ) == PackageManager.PERMISSION_GRANTED
-                    ) {
-                        // launch gallery intent
-                        val galleryIntent =
-                            Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                        galleryActivityResultLauncher.launch(galleryIntent)
-                    }
                 }
             }
         }
@@ -443,9 +417,7 @@ class MainActivity : AppCompatActivity() {
                     Manifest.permission.CAMERA
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
-                // launch camera intent
-                val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-                cameraActivityResultLauncher.launch(cameraIntent)
+                launchCamera()
             } else {
                 // request camera intent
                 ActivityCompat.requestPermissions(
@@ -458,8 +430,7 @@ class MainActivity : AppCompatActivity() {
                         Manifest.permission.CAMERA
                     ) == PackageManager.PERMISSION_GRANTED
                 ) {
-                    val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-                    cameraActivityResultLauncher.launch(cameraIntent)
+                    launchCamera()
                 }
             }
         }

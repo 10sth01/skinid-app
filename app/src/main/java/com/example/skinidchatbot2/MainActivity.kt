@@ -1,17 +1,17 @@
 package com.example.skinidchatbot2
 
 import android.Manifest
-import android.app.Instrumentation
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -27,18 +27,25 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.skinidchatbot2.databinding.ActivityMainBinding
 import com.example.skinidchatbot2.ml.ClassificationModel
 import com.google.firebase.database.FirebaseDatabase
+import com.theartofdev.edmodo.cropper.CropImage
+import com.theartofdev.edmodo.cropper.CropImageView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.image.TensorImage
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.FileDescriptor
+import java.io.FileOutputStream
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -55,6 +62,8 @@ class MainActivity : AppCompatActivity() {
     val target_width = 224
 
     private val AGREEMENT_KEY = "privacy_agreement_accepted"
+
+    var croppedUri: Uri? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -109,7 +118,40 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    // Resize a given bitmap to the target width and height
+    private fun getImageUri(inContext: Context?, inImage: Bitmap): Uri {
+
+        val tempFile = File.createTempFile("temprentpk", ".png")
+        val bytes = ByteArrayOutputStream()
+        inImage.compress(Bitmap.CompressFormat.PNG, 100, bytes)
+        val bitmapData = bytes.toByteArray()
+
+        val fileOutPut = FileOutputStream(tempFile)
+        fileOutPut.write(bitmapData)
+        fileOutPut.flush()
+        fileOutPut.close()
+        return Uri.fromFile(tempFile)
+    }
+
+    fun Context.getBitmap(uri: Uri): Bitmap =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) ImageDecoder.decodeBitmap(ImageDecoder.createSource(this.contentResolver, uri))
+        else MediaStore.Images.Media.getBitmap(this.contentResolver, uri)
+
+    private fun cropBitmap(originalBitmap: Bitmap) {
+        val imageUri = getImageUri(this, originalBitmap)
+
+        CropImage.activity(imageUri)
+            .setGuidelines(CropImageView.Guidelines.ON)
+            .setAspectRatio(1, 1)
+            .start(this)
+    }
+
+    private fun cropUri(originalUri: Uri) {
+        CropImage.activity(originalUri)
+            .setGuidelines(CropImageView.Guidelines.ON)
+            .setAspectRatio(1, 1)
+            .start(this)
+    }
+
     private fun resizeBitmap(originalBitmap: Bitmap): Bitmap {
         return Bitmap.createScaledBitmap(originalBitmap, target_width, target_height, true)
     }
@@ -244,7 +286,6 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-
     private fun imageUriPreprocessor(ImageUri: Uri) {
         // Open a file descriptor for the selected image
         val parcelFileDescriptor =
@@ -253,25 +294,15 @@ class MainActivity : AppCompatActivity() {
         // Decode the file descriptor into a Bitmap
         val image = BitmapFactory.decodeFileDescriptor(fileDescriptor)
         parcelFileDescriptor.close()
-        // Resize the image to the required dimensions for the model
-        val resizedBitmap = resizeBitmap(image)
-        // Display the resized image in the ImageView
-        mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
-        prediction = classifyImage(this, resizedBitmap)
+
+        cropUri(ImageUri)
     }
 
     private fun capturedImagePreprocessor(result: ActivityResult) {
         if (result.resultCode == RESULT_OK) {
 
             val imageBitmap = result.data?.extras?.get("data") as Bitmap
-            val resizedBitmap = resizeBitmap(imageBitmap)
-
-            mainActivity.imageDisplay.setImageBitmap(resizedBitmap)
-
-            prediction = classifyImage(this, resizedBitmap)
-
-            displayPrediction(prediction)
-            hidePopup()
+            cropBitmap(imageBitmap)
         }
     }
 
@@ -453,6 +484,25 @@ class MainActivity : AppCompatActivity() {
                 arrayOf(Manifest.permission.CAMERA),
                 CAMERA_REQUEST_CODE
             )
+        }
+    }
+
+    public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE) {
+            val result = CropImage.getActivityResult(data)
+            if (resultCode == RESULT_OK) {
+                val resultBitmap = getBitmap(result.uri)
+                mainActivity.imageDisplay.setImageBitmap(resultBitmap)
+                val resizedBitmap = resizeBitmap(resultBitmap)
+                val argbBitmap = resizedBitmap.copy(Bitmap.Config.ARGB_8888, true)
+
+                prediction = classifyImage(this, resizeBitmap(argbBitmap))
+                displayPrediction(prediction)
+                hidePopup()
+            } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
+                val error = result.error
+            }
         }
     }
 

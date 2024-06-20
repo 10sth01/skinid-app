@@ -351,8 +351,6 @@ class MainActivity : AppCompatActivity() {
 
                 if (selectedImageUri != null) {
                     imageUriPreprocessor(selectedImageUri)
-                    displayPrediction(prediction)
-                    hidePopup()
                 } else {
                     Toast.makeText(this, "No image selected", Toast.LENGTH_SHORT).show()
                 }

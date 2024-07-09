@@ -252,11 +252,10 @@ class MainActivity : AppCompatActivity() {
         val snapshot = database.child(conditionName).get().await()
 
         return if (snapshot.exists()) {
-            val causes = snapshot.child("causes").children.map { Cause(it.value as String) }
-            val description = snapshot.child("description").value as String
-            val symptoms = snapshot.child("symptoms").children.map { Symptom(it.value as String) }
-            val treatment =
-                snapshot.child("treatment").children.map { Treatment(it.value as String) }
+            val causes = snapshot.child("causes").children.mapNotNull { it.value as? String }.map { Cause(it) }
+            val description = snapshot.child("description").value as? String?: ""
+            val symptoms = snapshot.child("symptoms").children.mapNotNull { it.value as? String }.map { Symptom(it)}
+            val treatment = snapshot.child("treatment").children.mapNotNull { it.value as? String }.map { Treatment(it)}
 
             Condition(causes, description, symptoms, treatment)
         } else {
@@ -264,36 +263,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun <T> buildSectionText(items: List<T>, textExtractor: (T) -> String): String {
-        val stringBuilder = StringBuilder()
-        for (item in items) {
-            stringBuilder.append(" - ${textExtractor(item)}\n")
-        }
-        return stringBuilder.toString()
-    }
+    private fun <T> buildSectionText(items: List<T>, textExtractor: (T) -> String): String =
+        items.joinToString("\n") { " - ${textExtractor(it)}" }
 
     private fun showDiagnosisPopup(conditionName: String, condition: Condition) {
         val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView: View = inflater.inflate(R.layout.diagnosis_popup, mainActivity.root, false)
 
         // Populate the popup layout with data from the Condition object
-        val titleTextView: TextView = popupView.findViewById(R.id.popupTitle)
-        titleTextView.text = conditionName
-
-        val descriptionTextView: TextView = popupView.findViewById(R.id.descriptionTextView)
-        descriptionTextView.text = condition.description
-
-        // Populate Causes
-        val causesTextView: TextView = popupView.findViewById(R.id.causesTextView)
-        causesTextView.text = buildSectionText(condition.causes) { it.cause }
-
-        // Populate Symptoms
-        val symptomsTextView: TextView = popupView.findViewById(R.id.symptomsTextView)
-        symptomsTextView.text = buildSectionText(condition.symptoms) { it.symptom }
-
-        // Populate Treatment
-        val treatmentTextView: TextView = popupView.findViewById(R.id.treatmentTextView)
-        treatmentTextView.text = buildSectionText(condition.treatment) { it.treatment }
+        with(popupView) {
+            findViewById<TextView>(R.id.popupTitle).text = conditionName
+            findViewById<TextView>(R.id.descriptionTextView).text = condition.description
+            findViewById<TextView>(R.id.causesTextView).text = buildSectionText(condition.causes) { it.cause }
+            findViewById<TextView>(R.id.symptomsTextView).text = buildSectionText(condition.symptoms) { it.symptom }
+            findViewById<TextView>(R.id.treatmentTextView).text = buildSectionText(condition.treatment) {it.treatment}
+        }
 
         // Show the diagnosis popup
         val diagnosisPopup = PopupWindow(
@@ -301,7 +285,10 @@ class MainActivity : AppCompatActivity() {
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
             true
-        )
+        ).apply {
+            animationStyle = com.google.android.material.R.style.Animation_Design_BottomSheetDialog
+            showAtLocation(mainActivity.root, Gravity.CENTER, 0, 0)
+        }
 
         // Close the diagnosis popup
         val closeButton: Button = popupView.findViewById(R.id.closeButton)
@@ -310,16 +297,6 @@ class MainActivity : AppCompatActivity() {
             mainActivity.questionTextView.text = getString(R.string.home_greeting)
             mainActivity.cameraButton.visibility = View.VISIBLE
         }
-
-        diagnosisPopup.animationStyle =
-            com.google.android.material.R.style.Animation_Design_BottomSheetDialog
-
-        diagnosisPopup.showAtLocation(
-            mainActivity.root,
-            Gravity.CENTER,
-            0,
-            0
-        )
     }
 
     /*
@@ -455,21 +432,17 @@ class MainActivity : AppCompatActivity() {
         val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView: View = inflater.inflate(R.layout.imagepopup, mainActivity.root, false)
 
-        // Set up the upload button
         val uploadButton: Button = popupView.findViewById(R.id.upload_button)
         val captureButton: Button = popupView.findViewById(R.id.capture_button)
 
-        // Handle upload button click
         uploadButton.setOnClickListener {
             requestGalleryPermission()
         }
 
-        // Handle capture button click
         captureButton.setOnClickListener {
             requestCameraPermission()
         }
 
-        // Initialize and show the popup window
         imageUploadCapturePopup = PopupWindow(
             popupView,
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -510,7 +483,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Hide the image popup window if showing
     private fun hidePopup() {
         if (::imageUploadCapturePopup.isInitialized && imageUploadCapturePopup.isShowing) {
             imageUploadCapturePopup.dismiss()

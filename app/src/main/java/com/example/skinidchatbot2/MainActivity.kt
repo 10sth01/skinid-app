@@ -1,5 +1,6 @@
 package com.example.skinidchatbot2
 
+// Android Framework Imports
 import android.Manifest
 import android.content.Context
 import android.content.DialogInterface
@@ -27,43 +28,56 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.toBitmap
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.skinidchatbot2.databinding.ActivityMainBinding
-import com.example.skinidchatbot2.ml.ClassificationModel
+
+// Third-Party Library Imports
 import com.google.firebase.database.FirebaseDatabase
 import com.theartofdev.edmodo.cropper.CropImage
 import com.theartofdev.edmodo.cropper.CropImageView
+
+// Kotlin Coroutines Imports
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+
+// Tensorflow Lite Imports
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
-import java.io.ByteArrayOutputStream
+
+// Java Utility Imports
 import java.io.File
 import java.io.FileDescriptor
 import java.io.FileOutputStream
 
+// Project-Specific Imports
+import com.example.skinidchatbot2.databinding.ActivityMainBinding
+import com.example.skinidchatbot2.ml.ClassificationModel
 
 class MainActivity : AppCompatActivity() {
 
-    lateinit var mainActivity: ActivityMainBinding
+    private lateinit var mainActivity: ActivityMainBinding
 
-    lateinit var imageUploadCapturePopup: PopupWindow
+    // Popup window for image upload and capture options
+    private lateinit var imageUploadCapturePopup: PopupWindow
 
-    private val CAMERA_REQUEST_CODE = 100
-    private val GALLERY_REQUEST_CODE = 200
-
+    // Prediction result (class name and confidence score)
     var prediction: Pair<String, Float> = "" to 0.0f
 
-    val target_height = 224
-    val target_width = 224
+    private companion object {
+        // Request codes for permissions
+        const val CAMERA_REQUEST_CODE = 100
+        const val GALLERY_REQUEST_CODE = 200
 
-    private val AGREEMENT_KEY = "privacy_agreement_accepted"
+        // Target dimensions for image resizing
+        const val TARGET_HEIGHT = 224
+        const val TARGET_WIDTH = 224
 
-    var croppedUri: Uri? = null
+        // Key for storing privacy agreement acceptance state
+        const val LOG_TAG = "PrivacyAgreement"
+        const val AGREEMENT_KEY = "privacy_agreement_accepted"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -85,32 +99,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     /*
-    *   PRIVACY AGREEMENT
-    * */
+       PRIVACY AGREEMENT
+    */
 
     private fun isPrivacyAgreementAccepted(): Boolean {
         val sharedPreferences = getPreferences(Context.MODE_PRIVATE)
         val isAccepted = sharedPreferences.getBoolean(AGREEMENT_KEY, false)
-        Log.d("PrivacyAgreement", "Is Privacy Agreement Accepted: $isAccepted")
+        Log.d(LOG_TAG, "Is Privacy Agreement Accepted: $isAccepted")
         return isAccepted
     }
 
-    // Mark the privacy agreement as accepted in shared preferences
     private fun markPrivacyAgreementAccepted() {
         val sharedPreferences = getPreferences(Context.MODE_PRIVATE)
-        val editor = sharedPreferences.edit()
-        editor.putBoolean(AGREEMENT_KEY, true)
-        editor.apply()
+        sharedPreferences.edit().apply {
+            putBoolean(AGREEMENT_KEY, true)
+            apply()
+        }
     }
 
-    // Show the privacy agreement dialog to the user
     private fun showPrivacyAgreementDialog() {
         val dialogText = getString(R.string.privacy_agreement)
         val dialog = AlertDialog.Builder(this)
             .setMessage(dialogText)
             .setCancelable(false)
             .setPositiveButton("Accept") { _: DialogInterface, _: Int ->
-                // Update SharedPreferences whether the agreement is accepted
                 markPrivacyAgreementAccepted()
             }
             .create()
@@ -118,34 +130,34 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun getImageUri(inContext: Context?, inImage: Bitmap): Uri {
+    /*
+        IMAGE PROCESSING
+    */
 
-        val tempFile = File.createTempFile("temprentpk", ".png")
-        val bytes = ByteArrayOutputStream()
-        inImage.compress(Bitmap.CompressFormat.PNG, 100, bytes)
-        val bitmapData = bytes.toByteArray()
-
-        val fileOutPut = FileOutputStream(tempFile)
-        fileOutPut.write(bitmapData)
-        fileOutPut.flush()
-        fileOutPut.close()
+    private fun bitmapToUri(inContext: Context?, bitmap: Bitmap): Uri {
+        val tempFile = File.createTempFile("temp", ".png")
+        FileOutputStream(tempFile).use { out ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
         return Uri.fromFile(tempFile)
     }
 
-    fun Context.getBitmap(uri: Uri): Bitmap =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) ImageDecoder.decodeBitmap(ImageDecoder.createSource(this.contentResolver, uri))
-        else MediaStore.Images.Media.getBitmap(this.contentResolver, uri)
+    private fun Context.uriToBitmap(uri: Uri): Bitmap =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            ImageDecoder.decodeBitmap(ImageDecoder.createSource(this.contentResolver, uri))
+        } else {
+            MediaStore.Images.Media.getBitmap(this.contentResolver, uri)
+        }
 
-    private fun cropBitmap(originalBitmap: Bitmap) {
-        val imageUri = getImageUri(this, originalBitmap)
-
+    private fun cropImage(originalBitmap: Bitmap) {
+        val imageUri = bitmapToUri(this, originalBitmap)
         CropImage.activity(imageUri)
             .setGuidelines(CropImageView.Guidelines.ON)
             .setAspectRatio(1, 1)
             .start(this)
     }
 
-    private fun cropUri(originalUri: Uri) {
+    private fun cropImage(originalUri: Uri) {
         CropImage.activity(originalUri)
             .setGuidelines(CropImageView.Guidelines.ON)
             .setAspectRatio(1, 1)
@@ -153,10 +165,51 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun resizeBitmap(originalBitmap: Bitmap): Bitmap {
-        return Bitmap.createScaledBitmap(originalBitmap, target_width, target_height, true)
+        return Bitmap.createScaledBitmap(originalBitmap, TARGET_WIDTH, TARGET_HEIGHT, true)
     }
 
-    // Classify image using TensorFlow
+    private fun imageUriPreprocessor(ImageUri: Uri) {
+        val parcelFileDescriptor =
+            contentResolver.openFileDescriptor(ImageUri, "r")
+        val fileDescriptor: FileDescriptor = parcelFileDescriptor!!.fileDescriptor
+        val image = BitmapFactory.decodeFileDescriptor(fileDescriptor)
+        parcelFileDescriptor.close()
+
+        cropImage(ImageUri)
+    }
+
+    private fun capturedImagePreprocessor(result: ActivityResult) {
+        if (result.resultCode == RESULT_OK) {
+
+            val imageBitmap = result.data?.extras?.get("data") as Bitmap
+            cropImage(imageBitmap)
+        }
+    }
+
+    private fun displayPrediction(prediction: Pair<String, Float>) {
+        if (prediction.first != "None") {
+            CoroutineScope(Dispatchers.Main).launch {
+
+                val conditionData = fetchConditionData(prediction.first)
+
+                if (conditionData != null) {
+                    showDiagnosisPopup(prediction.first, conditionData)
+                    mainActivity.questionTextView.text = getString(R.string.home_greeting)
+                } else {
+                    mainActivity.questionTextView.text = getString(R.string.detected_false)
+                }
+                mainActivity.imageDisplay.setImageBitmap(null)
+
+            }
+        } else {
+            mainActivity.questionTextView.text = getString(R.string.detected_false)
+        }
+    }
+
+    /*
+        IMAGE CLASSIFICATION
+    */
+
     private fun classifyImage(context: Context, bitmap: Bitmap): Pair<String, Float> {
         val tensorImage = TensorImage(DataType.FLOAT32)
         tensorImage.load(bitmap)
@@ -178,7 +231,7 @@ class MainActivity : AppCompatActivity() {
         // Extract prediction result
         val predictions = outputFeature0.floatArray
 
-        val confidenceThreshold = 0.9f
+        val confidenceThreshold = 0.8f
 
         // List of class names
         val classNames = resources.getStringArray(R.array.classes)
@@ -208,7 +261,10 @@ class MainActivity : AppCompatActivity() {
         return Pair(className, confidence)
     }
 
-    // Fetch data for the specified condition from the Firebase database
+    /*
+        DATA FETCHING AND DISPLAY
+    */
+
     private suspend fun fetchConditionData(conditionName: String): Condition? {
         val database = FirebaseDatabase.getInstance().getReference("conditions")
         val snapshot = database.child(conditionName).get().await()
@@ -226,7 +282,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Build a formatted string for a list of items
     private fun <T> buildSectionText(items: List<T>, textExtractor: (T) -> String): String {
         val stringBuilder = StringBuilder()
         for (item in items) {
@@ -235,7 +290,6 @@ class MainActivity : AppCompatActivity() {
         return stringBuilder.toString()
     }
 
-    // Show a popup with the diagnosis information
     private fun showDiagnosisPopup(conditionName: String, condition: Condition) {
         val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView: View = inflater.inflate(R.layout.diagnosis_popup, mainActivity.root, false)
@@ -286,53 +340,9 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun imageUriPreprocessor(ImageUri: Uri) {
-        // Open a file descriptor for the selected image
-        val parcelFileDescriptor =
-            contentResolver.openFileDescriptor(ImageUri, "r")
-        val fileDescriptor: FileDescriptor = parcelFileDescriptor!!.fileDescriptor
-        // Decode the file descriptor into a Bitmap
-        val image = BitmapFactory.decodeFileDescriptor(fileDescriptor)
-        parcelFileDescriptor.close()
-
-        cropUri(ImageUri)
-    }
-
-    private fun capturedImagePreprocessor(result: ActivityResult) {
-        if (result.resultCode == RESULT_OK) {
-
-            val imageBitmap = result.data?.extras?.get("data") as Bitmap
-            cropBitmap(imageBitmap)
-        }
-    }
-
-    private fun displayPrediction(prediction: Pair<String, Float>) {
-        if (prediction.first != "None") {
-            CoroutineScope(Dispatchers.Main).launch {
-
-                val conditionData = fetchConditionData(prediction.first)
-
-                if (conditionData != null) {
-                    showDiagnosisPopup(prediction.first, conditionData)
-                    mainActivity.questionTextView.text = getString(R.string.home_greeting)
-                } else {
-                    mainActivity.questionTextView.text = getString(R.string.detected_false)
-                }
-                // Clear the ImageView after displaying the diagnosis
-                mainActivity.imageDisplay.setImageBitmap(null)
-
-            }
-        } else {
-            mainActivity.questionTextView.text = getString(R.string.detected_false)
-        }
-    }
-
-    // Hide the image popup window if showing
-    private fun hidePopup() {
-        if (::imageUploadCapturePopup.isInitialized && imageUploadCapturePopup.isShowing) {
-            imageUploadCapturePopup.dismiss()
-        }
-    }
+    /*
+        ACTIVITY RESULT HANDLERS
+    */
 
     // Register activity result launcher for the camera
     private val cameraActivityResultLauncher =
@@ -357,6 +367,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+    /*
+        GALLERY AND CAMERA LAUNCH
+     */
+
     private fun launchGallery() {
         val galleryIntent =
             Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
@@ -367,6 +381,10 @@ class MainActivity : AppCompatActivity() {
         val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         cameraActivityResultLauncher.launch(cameraIntent)
     }
+
+    /*
+        PERMISSION REQUEST HANDLERS
+     */
 
     // Handle permission request results
     override fun onRequestPermissionsResult(
@@ -395,44 +413,6 @@ class MainActivity : AppCompatActivity() {
 
             }
         }
-    }
-
-    // Show a popup window with options to capture or upload an image
-    private fun showPopup() {
-        val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        val popupView: View = inflater.inflate(R.layout.imagepopup, mainActivity.root, false)
-
-        // Set up the upload button
-        val uploadButton: Button = popupView.findViewById(R.id.upload_button)
-        val captureButton: Button = popupView.findViewById(R.id.capture_button)
-
-        // Handle upload button click
-        uploadButton.setOnClickListener {
-            requestGalleryPermission()
-        }
-
-        // Handle capture button click
-        captureButton.setOnClickListener {
-            requestCameraPermission()
-        }
-
-        // Initialize and show the popup window
-        imageUploadCapturePopup = PopupWindow(
-            popupView,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            true
-        )
-
-        imageUploadCapturePopup.animationStyle =
-            com.google.android.material.R.style.Animation_Design_BottomSheetDialog
-
-        imageUploadCapturePopup.showAtLocation(
-            mainActivity.root,
-            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL,
-            0,
-            0
-        )
     }
 
     private fun requestGalleryPermission() {
@@ -485,22 +465,73 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /*
+        APP CONTROLS
+     */
+
+    private fun showPopup() {
+        val inflater = getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val popupView: View = inflater.inflate(R.layout.imagepopup, mainActivity.root, false)
+
+        // Set up the upload button
+        val uploadButton: Button = popupView.findViewById(R.id.upload_button)
+        val captureButton: Button = popupView.findViewById(R.id.capture_button)
+
+        // Handle upload button click
+        uploadButton.setOnClickListener {
+            requestGalleryPermission()
+        }
+
+        // Handle capture button click
+        captureButton.setOnClickListener {
+            requestCameraPermission()
+        }
+
+        // Initialize and show the popup window
+        imageUploadCapturePopup = PopupWindow(
+            popupView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        )
+
+        imageUploadCapturePopup.animationStyle =
+            com.google.android.material.R.style.Animation_Design_BottomSheetDialog
+
+        imageUploadCapturePopup.showAtLocation(
+            mainActivity.root,
+            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL,
+            0,
+            0
+        )
+    }
+
     public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE) {
             val result = CropImage.getActivityResult(data)
             if (resultCode == RESULT_OK) {
-                val resultBitmap = getBitmap(result.uri)
+                val resultBitmap = uriToBitmap(result.uri)
+
                 mainActivity.imageDisplay.setImageBitmap(resultBitmap)
+
                 val resizedBitmap = resizeBitmap(resultBitmap)
                 val argbBitmap = resizedBitmap.copy(Bitmap.Config.ARGB_8888, true)
 
                 prediction = classifyImage(this, resizeBitmap(argbBitmap))
                 displayPrediction(prediction)
                 hidePopup()
+
             } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
                 val error = result.error
             }
+        }
+    }
+
+    // Hide the image popup window if showing
+    private fun hidePopup() {
+        if (::imageUploadCapturePopup.isInitialized && imageUploadCapturePopup.isShowing) {
+            imageUploadCapturePopup.dismiss()
         }
     }
 

@@ -168,32 +168,32 @@ class MainActivity : AppCompatActivity() {
         return Bitmap.createScaledBitmap(originalBitmap, TARGET_WIDTH, TARGET_HEIGHT, true)
     }
 
-    private fun imageUriPreprocessor(ImageUri: Uri) {
-        val parcelFileDescriptor =
-            contentResolver.openFileDescriptor(ImageUri, "r")
-        val fileDescriptor: FileDescriptor = parcelFileDescriptor!!.fileDescriptor
-        val image = BitmapFactory.decodeFileDescriptor(fileDescriptor)
-        parcelFileDescriptor.close()
-
-        cropImage(ImageUri)
+    private fun preprocessImageUri(imageUri: Uri) {
+        contentResolver.openFileDescriptor(imageUri, "r")?.use { parcelFileDescriptor ->
+            val fileDescriptor: FileDescriptor = parcelFileDescriptor!!.fileDescriptor
+            val image = BitmapFactory.decodeFileDescriptor(fileDescriptor)
+            cropImage(imageUri)
+        }
     }
 
-    private fun capturedImagePreprocessor(result: ActivityResult) {
+    private fun preprocessCapturedImage(result: ActivityResult) {
         if (result.resultCode == RESULT_OK) {
-
-            val imageBitmap = result.data?.extras?.get("data") as Bitmap
-            cropImage(imageBitmap)
+            (result.data?.extras?.get("data") as? Bitmap)?.let { imageBitmap ->
+                cropImage(imageBitmap)
+            }
         }
     }
 
     private fun displayPrediction(prediction: Pair<String, Float>) {
-        if (prediction.first != "None") {
+        val (condition, confidence) = prediction
+
+        if (condition != "None") {
             CoroutineScope(Dispatchers.Main).launch {
 
-                val conditionData = fetchConditionData(prediction.first)
+                val conditionData = fetchConditionData(condition)
 
                 if (conditionData != null) {
-                    showDiagnosisPopup(prediction.first, conditionData)
+                    showDiagnosisPopup(condition, conditionData)
                     mainActivity.questionTextView.text = getString(R.string.home_greeting)
                 } else {
                     mainActivity.questionTextView.text = getString(R.string.detected_false)
@@ -211,54 +211,36 @@ class MainActivity : AppCompatActivity() {
     */
 
     private fun classifyImage(context: Context, bitmap: Bitmap): Pair<String, Float> {
-        val tensorImage = TensorImage(DataType.FLOAT32)
-        tensorImage.load(bitmap)
+        val tensorImage = TensorImage(DataType.FLOAT32).apply { load(bitmap)}
 
         val model = ClassificationModel.newInstance(context)
 
         // Creates inputs for reference.
-        val inputFeature0 =
-            TensorBuffer.createFixedSize(intArrayOf(1, 224, 224, 3), DataType.FLOAT32)
-        inputFeature0.loadBuffer(tensorImage.buffer)
+        val inputFeature = TensorBuffer.createFixedSize(intArrayOf(1, 224, 224, 3), DataType.FLOAT32)
+        inputFeature.loadBuffer(tensorImage.buffer)
 
         // Runs model inference and gets result.
-        val outputs = model.process(inputFeature0)
-        val outputFeature0 = outputs.outputFeature0AsTensorBuffer
+        val outputFeature = model.process(inputFeature).outputFeature0AsTensorBuffer
+
+        // Extract prediction result
+        val predictions = outputFeature.floatArray
 
         // Releases model resources if no longer used.
         model.close()
 
-        // Extract prediction result
-        val predictions = outputFeature0.floatArray
-
-        val confidenceThreshold = 0.8f
-
-        // List of class names
+        // Load class names
         val classNames = resources.getStringArray(R.array.classes)
+        val confidenceThreshold = 0.9f
 
         // Pair each class label with its probability
-        val categorizedPredictions = mutableListOf<Pair<String, Float>>()
-
-        for (i in predictions.indices) {
-            val className = classNames.getOrNull(i) ?: "unknown"
-            val confidence = predictions[i]
-
-            if (confidence >= confidenceThreshold) {
-                categorizedPredictions.add(Pair(className, confidence))
-            } else {
-                categorizedPredictions.add(Pair("None", 0.0f))
-            }
+        val categorizedPredictions = predictions.mapIndexed { index, confidence ->
+            val className = classNames.getOrNull(index) ?: "unknown"
+            if (confidence >= confidenceThreshold) Pair(className, confidence) else Pair("None", 0.0f)
         }
 
-        model.close() // Release model resources
+        val bestPrediction = categorizedPredictions.maxByOrNull { it.second } ?: Pair("None", 0.0f)
 
-        val orderedPredictions = categorizedPredictions.sortedByDescending { it.second }
-
-        val firstPrediction = orderedPredictions[0]
-        val className = firstPrediction.first
-        val confidence = firstPrediction.second
-
-        return Pair(className, confidence)
+        return bestPrediction
     }
 
     /*
@@ -347,7 +329,7 @@ class MainActivity : AppCompatActivity() {
     // Register activity result launcher for the camera
     private val cameraActivityResultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            capturedImagePreprocessor(result)
+            preprocessCapturedImage(result)
         }
 
     // Register activity result launcher for the gallery
@@ -360,7 +342,7 @@ class MainActivity : AppCompatActivity() {
                 val selectedImageUri = result.data?.data
 
                 if (selectedImageUri != null) {
-                    imageUriPreprocessor(selectedImageUri)
+                    preprocessImageUri(selectedImageUri)
                 } else {
                     Toast.makeText(this, "No image selected", Toast.LENGTH_SHORT).show()
                 }
